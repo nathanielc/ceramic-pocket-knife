@@ -1,0 +1,28 @@
+[package]
+name = "ceramic-pocket-knife"
+description = "CLI multitool for Ceramic IDs and data"
+version = "0.1.0"
+edition = "2021"
+authors = ["Nathaniel Cook <nvcook42@gmail.com>"]
+license = "MIT"
+keywords = ["ceramic", "encoding", "multiformat", "cli"]
+categories = ["command-line-utilities"]
+repository = "https://github.com/nathanielc/ceramic-pocket-knife"
+
+[[bin]]
+name = "cpk"
+
+
+[dependencies]
+anyhow = "1"
+ceramic-core = { path = "../rust-ceramic/core/" }
+recon = { path = "../rust-ceramic/recon/" }
+cid = "0.9"
+clap = { version = "4", features = ["derive"] }
+multibase = "0.9"
+multicodec = "0.1.0"
+rand = "0.8.5"
+
+[build-dependencies]
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4.3.2"
