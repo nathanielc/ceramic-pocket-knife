@@ -2,7 +2,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 
 /// Convert to and from multibase encodings
 #[derive(Parser, Debug)]
-#[command(author, version, about)]
+#[command(name = "cpk", author, version, about)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
@@ -10,6 +10,8 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Command {
+    /// Generate shell completion scripts to stdout, i.e. for bash run: source <(cpk completion bash)
+    Completion(CompletionArgs),
     // ---------------- Multibase Tools ----------------------------//
     /// Decode encoded input from stdin without the multibase prefix.
     BaseGuess,
@@ -35,6 +37,10 @@ pub enum Command {
     Base32Upper,
     /// convert stdin to base32-z         h z-base-32 (used by Tahoe-LAFS)
     Base32Z,
+    /// convert stdin to base36           k lowercase alphanumeric no padding
+    Base36,
+    /// convert stdin to base36-upper     K uppercase alphanumeric no padding
+    Base36Upper,
     /// convert stdin to base58-flickr    Z base58 flicker
     Base58Flickr,
     /// convert stdin to base58-btc       z base58 bitcoin
@@ -55,6 +61,15 @@ pub enum Command {
     StreamIdGenerate(GenerateStreamIdArgs),
     /// Generate a random event ID
     EventIdGenerate(GenerateEventIdArgs),
+    /// Generate a random did:key method
+    DidKeyGenerate,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CompletionArgs {
+    /// Shell type.
+    #[arg(value_enum)]
+    pub shell: clap_complete_command::Shell,
 }
 
 #[derive(Args, Debug, Clone)]

@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
-use ceramic_core::{Cid, StreamId, StreamIdType};
+use ceramic_core::{Cid, EventId, StreamId, StreamIdType};
 use cid::multihash::{Code, MultihashDigest};
+use multibase::Base;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use recon::EventId;
 
 use crate::cli::{
     Command, CreateStreamIdArgs, GenerateEventIdArgs, GenerateStreamIdArgs, InspectStreamIdArgs,
@@ -16,6 +16,7 @@ pub enum Operation {
     InspectStreamId(InspectStreamIdArgs),
     GenerateStreamId(GenerateStreamIdArgs),
     GenerateEventId(GenerateEventIdArgs),
+    GenerateDidKey,
 }
 
 impl TryFrom<Command> for Operation {
@@ -28,6 +29,7 @@ impl TryFrom<Command> for Operation {
             Command::StreamIdInspect(args) => Ok(Operation::InspectStreamId(args)),
             Command::StreamIdGenerate(args) => Ok(Operation::GenerateStreamId(args)),
             Command::EventIdGenerate(args) => Ok(Operation::GenerateEventId(args)),
+            Command::DidKeyGenerate => Ok(Operation::GenerateDidKey),
             _ => Err(value),
         }
     }
@@ -90,6 +92,11 @@ pub fn run(op: Operation) -> anyhow::Result<()> {
             );
 
             println!("{}", event_id.to_hex());
+        }
+        Operation::GenerateDidKey => {
+            let mut buffer = [0; 32];
+            thread_rng().fill(&mut buffer);
+            println!("did:key:{}", multibase::encode(Base::Base58Btc, &buffer));
         }
     };
     Ok(())

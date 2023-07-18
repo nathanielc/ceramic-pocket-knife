@@ -1,16 +1,22 @@
-use clap::Parser;
-
 mod ceramic;
 mod cli;
 mod multibase;
 
 pub use cli::Cli;
 
+use clap::{CommandFactory, Parser};
+
 pub fn run() -> anyhow::Result<()> {
     let args = cli::Cli::parse();
 
-    // Try each category of command in turn, until we
+    // Generate shell completetions
+    if let cli::Command::Completion(args) = &args.command {
+        args.shell
+            .generate(&mut Cli::command(), &mut std::io::stdout());
+        return Ok(());
+    };
 
+    // Try each category of command in turn, until we find a match.
     let cmd = match multibase::Operation::try_from(args.command) {
         Ok(op) => {
             return multibase::run(op);
