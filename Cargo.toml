@@ -12,16 +12,25 @@ repository = "https://github.com/nathanielc/ceramic-pocket-knife"
 [[bin]]
 name = "cpk"
 
-
 [dependencies]
 anyhow = "1"
 ceramic-core = { git = "https://github.com/3box/rust-ceramic", branch = "main" }
+recon = { git = "https://github.com/3box/rust-ceramic", branch = "main" }
 cid = "0.9"
 clap = { version = "4", features = ["derive"] }
+clap_complete_command = "0.5.1"
+libp2p-identity = { version = "0.1.2", features = ["peerid", "ed25519"] }
 multibase = "0.9"
 multicodec = "0.1.0"
-rand = "0.8.5"
-clap_complete_command = "0.5.1"
+rand = { version = "0.8.5", features = ["small_rng"] }
+sqlx = { version = "=0.7.0", features = ["sqlite", "runtime-tokio"] }
+tokio = { version = "1.29.1", features = ["rt", "rt-multi-thread", "macros"] }
+hex = "0.4.3"
 
 [build-dependencies]
 clap = { version = "4", features = ["derive"] }
+
+# Uncomment these lines to use a local copy of rust-ceramic
+#[patch."https://github.com/3box/rust-ceramic"]
+#ceramic-core = { path = "../rust-ceramic/core" }
+#recon = { path = "../rust-ceramic/recon" }

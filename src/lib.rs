@@ -6,7 +6,7 @@ pub use cli::Cli;
 
 use clap::{CommandFactory, Parser};
 
-pub fn run() -> anyhow::Result<()> {
+pub async fn run() -> anyhow::Result<()> {
     let args = cli::Cli::parse();
 
     // Generate shell completetions
@@ -25,7 +25,7 @@ pub fn run() -> anyhow::Result<()> {
     };
     let _cmd = match ceramic::Operation::try_from(cmd) {
         Ok(op) => {
-            return ceramic::run(op);
+            return ceramic::run(op).await;
         }
         Err(cmd) => cmd,
     };
