@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 /// Convert to and from multibase encodings
@@ -61,8 +63,16 @@ pub enum Command {
     StreamIdGenerate(GenerateStreamIdArgs),
     /// Generate a random event ID
     EventIdGenerate(GenerateEventIdArgs),
+    /// Decode a hex encoded event ID
+    EventIdDecode(DecodeEventIdArgs),
+    /// Decode a hex encoded interest
+    InterestDecode(DecodeInterestArgs),
     /// Generate a random did:key method
     DidKeyGenerate,
+    /// Generate a random peer ID
+    PeerIdGenerate,
+    /// Generate a ceramic-one sqldb with random data
+    SqlDbGenerate(GenerateSqlDbArgs),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -111,6 +121,19 @@ pub struct GenerateEventIdArgs {
     #[arg(long, value_enum)]
     pub init_id: Option<String>,
 }
+#[derive(Args, Debug, Clone)]
+pub struct DecodeEventIdArgs {
+    /// Hex encoded Event ID to decode
+    #[arg()]
+    pub event_id: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct DecodeInterestArgs {
+    /// Hex encoded Interest to decode
+    #[arg()]
+    pub interest: String,
+}
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Network {
@@ -125,4 +148,26 @@ pub enum Network {
 pub enum StreamType {
     Model,
     Document,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct GenerateSqlDbArgs {
+    /// Network
+    #[arg(long, default_value = "./ceramic-one.db")]
+    pub path: PathBuf,
+    /// Network
+    #[arg(long, default_value = "100")]
+    pub count: usize,
+    /// Network
+    #[arg(long, default_value = "testnet-clay", value_enum)]
+    pub network: Network,
+    /// Sort Value, if not set generates random value per event.
+    #[arg(long, value_enum)]
+    pub sort_value: Option<String>,
+    /// Controller, if not set generates random value per event.
+    #[arg(long, value_enum)]
+    pub controller: Option<String>,
+    /// Stream ID of init event, if not set generates random value per event.
+    #[arg(long, value_enum)]
+    pub init_id: Option<String>,
 }
