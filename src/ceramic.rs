@@ -76,8 +76,13 @@ pub async fn run(op: Operation) -> Result<()> {
         }
         Operation::GenerateEventId(args) => {
             let network = &convert_network(args.network, Some(thread_rng().gen()));
-            let event_id =
-                random_event_id(&network, args.sort_value, args.controller, args.init_id)?;
+            let event_id = random_event_id(
+                &network,
+                args.sort_key,
+                args.sort_value,
+                args.controller,
+                args.init_id,
+            )?;
             println!("{}", event_id.to_hex());
         }
         Operation::DecodeEventId(args) => {
@@ -132,13 +137,14 @@ pub async fn run(op: Operation) -> Result<()> {
             for i in 0..args.count {
                 let event_id = random_event_id(
                     &network,
+                    Some(args.sort_key.clone()),
                     args.sort_value.clone(),
                     args.controller.clone(),
                     args.init_id.clone(),
                 )?;
                 batch.push(event_id);
                 if batch.len() == batch.capacity() {
-                    insert_batch(&mut conn, &batch).await?;
+                    insert_batch(&mut conn, &args.sort_key, &batch).await?;
                     batch.clear();
                 }
                 if i % 100000 == 0 {
@@ -146,7 +152,7 @@ pub async fn run(op: Operation) -> Result<()> {
                     stdout().flush()?;
                 }
             }
-            insert_batch(&mut conn, &batch).await?;
+            insert_batch(&mut conn, &args.sort_key, &batch).await?;
             println!("done");
         }
     };
@@ -156,7 +162,7 @@ pub async fn run(op: Operation) -> Result<()> {
 fn convert_type(value: StreamType) -> StreamIdType {
     match value {
         StreamType::Model => StreamIdType::Model,
-        StreamType::Document => StreamIdType::Document,
+        StreamType::Document => StreamIdType::ModelInstanceDocument,
     }
 }
 fn convert_network(value: Network, local_id: Option<u32>) -> ceramic_core::Network {
@@ -178,10 +184,18 @@ fn random_cid() -> Cid {
 
 fn random_event_id(
     network: &ceramic_core::Network,
+    sort_key: Option<String>,
     sort_value: Option<String>,
     controller: Option<String>,
     init_id: Option<String>,
 ) -> Result<EventId> {
+    let sort_key = sort_key.unwrap_or_else(|| {
+        thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(12)
+            .map(char::from)
+            .collect()
+    });
     let sort_value = sort_value.unwrap_or_else(|| {
         StreamId {
             r#type: StreamIdType::Model,
@@ -205,6 +219,7 @@ fn random_event_id(
         });
     Ok(EventId::new(
         network,
+        &sort_key,
         &sort_value,
         &controller,
         &init_id.cid,
@@ -213,7 +228,11 @@ fn random_event_id(
     ))
 }
 
-async fn insert_batch(conn: &mut SqliteConnection, batch: &[EventId]) -> Result<()> {
+async fn insert_batch(
+    conn: &mut SqliteConnection,
+    sort_key: &str,
+    batch: &[EventId],
+) -> Result<()> {
     if batch.is_empty() {
         return Ok(());
     }
@@ -225,7 +244,7 @@ async fn insert_batch(conn: &mut SqliteConnection, batch: &[EventId]) -> Result<
                     );
     query_builder.push_values(batch.into_iter(), |mut b, event| {
         let hash = Sha256a::digest(event);
-        b.push_bind("model")
+        b.push_bind(sort_key)
             .push_bind(event.as_bytes())
             .push_bind(hash.as_u32s()[0])
             .push_bind(hash.as_u32s()[1])
