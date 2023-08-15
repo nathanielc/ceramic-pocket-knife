@@ -95,7 +95,7 @@ pub struct CreateStreamIdArgs {
 #[derive(Args, Debug, Clone)]
 pub struct InspectStreamIdArgs {
     /// Stream ID
-    #[arg(long)]
+    #[arg()]
     pub id: String,
 }
 
@@ -111,14 +111,17 @@ pub struct GenerateEventIdArgs {
     /// Network
     #[arg(long, default_value = "testnet-clay", value_enum)]
     pub network: Network,
+    /// Sort Key, if not set generates random value.
+    #[arg(long)]
+    pub sort_key: Option<String>,
     /// Sort Value, if not set generates random value.
-    #[arg(long, value_enum)]
+    #[arg(long)]
     pub sort_value: Option<String>,
     /// Controller, if not set generates random value.
-    #[arg(long, value_enum)]
+    #[arg(long)]
     pub controller: Option<String>,
     /// Stream ID of init event, if not set generates random value.
-    #[arg(long, value_enum)]
+    #[arg(long)]
     pub init_id: Option<String>,
 }
 #[derive(Args, Debug, Clone)]
@@ -161,13 +164,16 @@ pub struct GenerateSqlDbArgs {
     /// Network
     #[arg(long, default_value = "testnet-clay", value_enum)]
     pub network: Network,
+    /// Sort Key for all events.
+    #[arg(long, default_value = "model")]
+    pub sort_key: String,
     /// Sort Value, if not set generates random value per event.
-    #[arg(long, value_enum)]
+    #[arg(long)]
     pub sort_value: Option<String>,
     /// Controller, if not set generates random value per event.
-    #[arg(long, value_enum)]
+    #[arg(long)]
     pub controller: Option<String>,
     /// Stream ID of init event, if not set generates random value per event.
-    #[arg(long, value_enum)]
+    #[arg(long)]
     pub init_id: Option<String>,
 }

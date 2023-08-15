@@ -616,9 +616,10 @@ checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
 [[package]]
 name = "ceramic-core"
 version = "0.1.0"
-source = "git+https://github.com/3box/rust-ceramic?branch=main#17277b3848bae325d2d226c790ea933c3433705b"
+source = "git+https://github.com/3box/rust-ceramic?branch=main#f3dec49e9a17b27285bec0343669fcddb524b83b"
 dependencies = [
  "anyhow",
+ "async-trait",
  "base64 0.21.2",
  "cid 0.9.0",
  "did-method-key",
@@ -3405,7 +3406,7 @@ dependencies = [
 [[package]]
 name = "recon"
 version = "0.1.0"
-source = "git+https://github.com/3box/rust-ceramic?branch=main#17277b3848bae325d2d226c790ea933c3433705b"
+source = "git+https://github.com/3box/rust-ceramic?branch=main#f3dec49e9a17b27285bec0343669fcddb524b83b"
 dependencies = [
  "anyhow",
  "async-trait",
