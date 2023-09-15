@@ -1,5 +1,6 @@
 mod ceramic;
 mod cli;
+mod ipld;
 mod multibase;
 
 pub use cli::Cli;
@@ -20,6 +21,12 @@ pub async fn run() -> anyhow::Result<()> {
     let cmd = match multibase::Operation::try_from(args.command) {
         Ok(op) => {
             return multibase::run(op);
+        }
+        Err(cmd) => cmd,
+    };
+    let cmd = match ipld::Operation::try_from(cmd) {
+        Ok(op) => {
+            return ipld::run(op).await;
         }
         Err(cmd) => cmd,
     };

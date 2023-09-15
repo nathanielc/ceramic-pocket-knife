@@ -5,29 +5,31 @@ use std::{
 
 use anyhow::Result;
 use ceramic_core::{Cid, EventId, Interest, StreamId, StreamIdType};
-use cid::multihash::{Code, MultihashDigest};
 use libp2p_identity::PeerId;
 use multibase::Base;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use recon::{AssociativeHash, Key, Sha256a};
 use sqlx::{Connection, QueryBuilder, Sqlite, SqliteConnection};
 
-use crate::cli::{
-    Command, CreateStreamIdArgs, DecodeEventIdArgs, DecodeInterestArgs, GenerateEventIdArgs,
-    GenerateSqlDbArgs, GenerateStreamIdArgs, InspectStreamIdArgs, Network, StreamType,
+use crate::{
+    cli::{
+        Command, EventIdDecodeArgs, EventIdGenerateArgs, InterestDecodeArgs, Network,
+        SqlDbGenerateArgs, StreamIdCreateArgs, StreamIdGenerateArgs, StreamIdInspectArgs,
+        StreamType,
+    },
+    ipld::random_cid,
 };
 
 pub enum Operation {
-    GenerateCid,
-    CreateStreamId(CreateStreamIdArgs),
-    InspectStreamId(InspectStreamIdArgs),
-    GenerateStreamId(GenerateStreamIdArgs),
-    GenerateEventId(GenerateEventIdArgs),
-    DecodeEventId(DecodeEventIdArgs),
-    DecodeInterest(DecodeInterestArgs),
-    GenerateDidKey,
-    GeneratePeerId,
-    GenerateSqlDb(GenerateSqlDbArgs),
+    StreamIdCreate(StreamIdCreateArgs),
+    StreamIdInspect(StreamIdInspectArgs),
+    StreamIdGenerate(StreamIdGenerateArgs),
+    EventIdGenerate(EventIdGenerateArgs),
+    EventIdDecode(EventIdDecodeArgs),
+    InterestDecode(InterestDecodeArgs),
+    DidKeyGenerate,
+    PeerIdGenerate,
+    SqlDbGenerate(SqlDbGenerateArgs),
 }
 
 impl TryFrom<Command> for Operation {
@@ -35,16 +37,15 @@ impl TryFrom<Command> for Operation {
 
     fn try_from(value: Command) -> std::result::Result<Self, Self::Error> {
         match value {
-            Command::CidGenerate => Ok(Operation::GenerateCid),
-            Command::StreamIdCreate(args) => Ok(Operation::CreateStreamId(args)),
-            Command::StreamIdInspect(args) => Ok(Operation::InspectStreamId(args)),
-            Command::StreamIdGenerate(args) => Ok(Operation::GenerateStreamId(args)),
-            Command::EventIdGenerate(args) => Ok(Operation::GenerateEventId(args)),
-            Command::EventIdDecode(args) => Ok(Operation::DecodeEventId(args)),
-            Command::InterestDecode(args) => Ok(Operation::DecodeInterest(args)),
-            Command::DidKeyGenerate => Ok(Operation::GenerateDidKey),
-            Command::PeerIdGenerate => Ok(Operation::GeneratePeerId),
-            Command::SqlDbGenerate(args) => Ok(Operation::GenerateSqlDb(args)),
+            Command::StreamIdCreate(args) => Ok(Operation::StreamIdCreate(args)),
+            Command::StreamIdInspect(args) => Ok(Operation::StreamIdInspect(args)),
+            Command::StreamIdGenerate(args) => Ok(Operation::StreamIdGenerate(args)),
+            Command::EventIdGenerate(args) => Ok(Operation::EventIdGenerate(args)),
+            Command::EventIdDecode(args) => Ok(Operation::EventIdDecode(args)),
+            Command::InterestDecode(args) => Ok(Operation::InterestDecode(args)),
+            Command::DidKeyGenerate => Ok(Operation::DidKeyGenerate),
+            Command::PeerIdGenerate => Ok(Operation::PeerIdGenerate),
+            Command::SqlDbGenerate(args) => Ok(Operation::SqlDbGenerate(args)),
             _ => Err(value),
         }
     }
@@ -52,29 +53,25 @@ impl TryFrom<Command> for Operation {
 
 pub async fn run(op: Operation) -> Result<()> {
     match op {
-        Operation::GenerateCid => {
-            let cid = random_cid();
-            println!("{}", cid);
-        }
-        Operation::CreateStreamId(args) => {
+        Operation::StreamIdCreate(args) => {
             let stream_id = StreamId {
                 r#type: convert_type(args.r#type),
                 cid: Cid::from_str(&args.cid)?,
             };
             println!("{}", stream_id.to_string());
         }
-        Operation::InspectStreamId(args) => {
+        Operation::StreamIdInspect(args) => {
             let stream_id = StreamId::from_str(&args.id)?;
             println!("{:?}", stream_id);
         }
-        Operation::GenerateStreamId(args) => {
+        Operation::StreamIdGenerate(args) => {
             let stream_id = StreamId {
                 r#type: convert_type(args.r#type),
                 cid: random_cid(),
             };
             println!("{}", stream_id.to_string());
         }
-        Operation::GenerateEventId(args) => {
+        Operation::EventIdGenerate(args) => {
             let network = &convert_network(args.network, Some(thread_rng().gen()));
             let event_id = random_event_id(
                 &network,
@@ -85,26 +82,26 @@ pub async fn run(op: Operation) -> Result<()> {
             )?;
             println!("{}", event_id.to_hex());
         }
-        Operation::DecodeEventId(args) => {
+        Operation::EventIdDecode(args) => {
             let bytes = hex::decode(args.event_id)?;
             let event_id = EventId::from(bytes);
             println!("{:#?}", event_id);
         }
-        Operation::DecodeInterest(args) => {
+        Operation::InterestDecode(args) => {
             let bytes = hex::decode(args.interest)?;
             let interest = Interest::from(bytes);
             println!("{:#?}", interest);
         }
-        Operation::GenerateDidKey => {
+        Operation::DidKeyGenerate => {
             let mut buffer = [0; 32];
             thread_rng().fill(&mut buffer);
             println!("did:key:{}", multibase::encode(Base::Base58Btc, &buffer));
         }
-        Operation::GeneratePeerId => {
+        Operation::PeerIdGenerate => {
             let peer_id = PeerId::random();
             println!("{}", peer_id.to_string());
         }
-        Operation::GenerateSqlDb(args) => {
+        Operation::SqlDbGenerate(args) => {
             let network = &convert_network(args.network, Some(thread_rng().gen()));
 
             let mut conn =
@@ -173,13 +170,6 @@ fn convert_network(value: Network, local_id: Option<u32>) -> ceramic_core::Netwo
         Network::Local => ceramic_core::Network::Local(local_id.unwrap()),
         Network::InMemory => ceramic_core::Network::InMemory,
     }
-}
-
-fn random_cid() -> Cid {
-    let mut data = [0u8; 8];
-    thread_rng().fill(&mut data);
-    let hash = Code::Sha2_256.digest(&data);
-    Cid::new_v1(0x00, hash)
 }
 
 fn random_event_id(

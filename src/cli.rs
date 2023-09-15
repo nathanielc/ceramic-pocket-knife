@@ -53,26 +53,34 @@ pub enum Command {
     Base64Url,
 
     // ---------------- Ceramic Tools ----------------------------//
-    /// Generate a random stream ID
-    CidGenerate,
     /// Create a stream ID
-    StreamIdCreate(CreateStreamIdArgs),
+    StreamIdCreate(StreamIdCreateArgs),
     /// Inspect a stream ID
-    StreamIdInspect(InspectStreamIdArgs),
+    StreamIdInspect(StreamIdInspectArgs),
     /// Generate a random stream ID
-    StreamIdGenerate(GenerateStreamIdArgs),
+    StreamIdGenerate(StreamIdGenerateArgs),
     /// Generate a random event ID
-    EventIdGenerate(GenerateEventIdArgs),
+    EventIdGenerate(EventIdGenerateArgs),
     /// Decode a hex encoded event ID
-    EventIdDecode(DecodeEventIdArgs),
+    EventIdDecode(EventIdDecodeArgs),
     /// Decode a hex encoded interest
-    InterestDecode(DecodeInterestArgs),
+    InterestDecode(InterestDecodeArgs),
     /// Generate a random did:key method
     DidKeyGenerate,
     /// Generate a random peer ID
     PeerIdGenerate,
     /// Generate a ceramic-one sqldb with random data
-    SqlDbGenerate(GenerateSqlDbArgs),
+    SqlDbGenerate(SqlDbGenerateArgs),
+
+    // ---------------- IPLD Tools ----------------------------//
+    /// Generate a random stream ID
+    CidGenerate,
+    /// Inspect a CID
+    CidInspect(CidInspectArgs),
+    /// Convert DAG-JSON data to DAG-CBOR
+    DagJsonToCbor,
+    /// Convert DAG-JOSE data to DAG-JSON
+    DagJoseToJson,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -83,7 +91,7 @@ pub struct CompletionArgs {
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct CreateStreamIdArgs {
+pub struct StreamIdCreateArgs {
     /// Stream type.
     #[arg(long, value_enum)]
     pub r#type: StreamType,
@@ -93,21 +101,21 @@ pub struct CreateStreamIdArgs {
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct InspectStreamIdArgs {
+pub struct StreamIdInspectArgs {
     /// Stream ID
     #[arg()]
     pub id: String,
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct GenerateStreamIdArgs {
+pub struct StreamIdGenerateArgs {
     /// Stream type.
     #[arg(long, value_enum)]
     pub r#type: StreamType,
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct GenerateEventIdArgs {
+pub struct EventIdGenerateArgs {
     /// Network
     #[arg(long, default_value = "testnet-clay", value_enum)]
     pub network: Network,
@@ -125,14 +133,14 @@ pub struct GenerateEventIdArgs {
     pub init_id: Option<String>,
 }
 #[derive(Args, Debug, Clone)]
-pub struct DecodeEventIdArgs {
+pub struct EventIdDecodeArgs {
     /// Hex encoded Event ID to decode
     #[arg()]
     pub event_id: String,
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct DecodeInterestArgs {
+pub struct InterestDecodeArgs {
     /// Hex encoded Interest to decode
     #[arg()]
     pub interest: String,
@@ -154,7 +162,7 @@ pub enum StreamType {
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct GenerateSqlDbArgs {
+pub struct SqlDbGenerateArgs {
     /// Network
     #[arg(long, default_value = "./ceramic-one.db")]
     pub path: PathBuf,
@@ -176,4 +184,11 @@ pub struct GenerateSqlDbArgs {
     /// Stream ID of init event, if not set generates random value per event.
     #[arg(long)]
     pub init_id: Option<String>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CidInspectArgs {
+    /// CID
+    #[arg()]
+    pub cid: String,
 }

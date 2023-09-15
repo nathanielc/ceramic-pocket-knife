@@ -358,6 +358,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "604178f6c5c21f02dc555784810edfb88d34ac2c73b2eae109655649ee73ce3d"
 
 [[package]]
+name = "base64-url"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c5b0a88aa36e9f095ee2e2b13fb8c5e4313e022783aedacc123328c0084916d"
+dependencies = [
+ "base64 0.21.2",
+]
+
+[[package]]
 name = "base64ct"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -569,7 +578,7 @@ dependencies = [
  "hex",
  "http",
  "iri-string",
- "libipld",
+ "libipld 0.14.0",
  "serde",
  "serde_with 2.3.3",
  "siwe",
@@ -648,7 +657,9 @@ dependencies = [
  "cid 0.9.0",
  "clap",
  "clap_complete_command",
+ "dag-jose",
  "hex",
+ "libipld 0.15.0",
  "libp2p-identity",
  "multibase 0.9.1",
  "multicodec",
@@ -972,6 +983,21 @@ dependencies = [
  "rand_core 0.5.1",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "dag-jose"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66d43879cac9c48b2f934bc49947cb1a1f82b05e83175cf2eba1ced8496322f0"
+dependencies = [
+ "anyhow",
+ "base64-url",
+ "libipld 0.15.0",
+ "serde",
+ "serde_derive",
+ "serde_ipld_dagcbor",
+ "thiserror",
 ]
 
 [[package]]
@@ -2423,14 +2449,32 @@ dependencies = [
  "async-trait",
  "cached",
  "fnv",
- "libipld-cbor",
- "libipld-cbor-derive",
- "libipld-core",
- "libipld-json",
- "libipld-macro",
+ "libipld-cbor 0.14.0",
+ "libipld-cbor-derive 0.14.0",
+ "libipld-core 0.14.0",
+ "libipld-json 0.14.0",
+ "libipld-macro 0.14.0",
  "log",
  "multihash 0.16.3",
  "parking_lot",
+ "thiserror",
+]
+
+[[package]]
+name = "libipld"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a20e38e0ad9a2fd600476691fa0780421931a198279985e398a3a0851903e1b2"
+dependencies = [
+ "fnv",
+ "libipld-cbor 0.15.0",
+ "libipld-cbor-derive 0.15.0",
+ "libipld-core 0.15.0",
+ "libipld-json 0.15.0",
+ "libipld-macro 0.15.0",
+ "libipld-pb",
+ "log",
+ "multihash 0.17.0",
  "thiserror",
 ]
 
@@ -2441,7 +2485,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8dd1ab68c9d26f20c7d0dfea6eecbae8c00359875210001b33ca27d4a02f3d09"
 dependencies = [
  "byteorder 1.4.3",
- "libipld-core",
+ "libipld-core 0.14.0",
+ "thiserror",
+]
+
+[[package]]
+name = "libipld-cbor"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4b75370e27e0745910a9991c83f365cdae58027acf0502aa7987ac538a8a4744"
+dependencies = [
+ "byteorder 1.4.3",
+ "libipld-core 0.15.0",
  "thiserror",
 ]
 
@@ -2450,6 +2505,19 @@ name = "libipld-cbor-derive"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69ec2f49393a1347a2d95ebcb248ff75d0d47235919b678036c010a8cd927375"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "synstructure",
+]
+
+[[package]]
+name = "libipld-cbor-derive"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4515686b6bffd663a1fbdd87408ced5b612751910a9e309042e9efef9dbdb324"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -2474,13 +2542,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "libipld-core"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7a704ba3b25dee9e7a2361fae2c7c19defae2a92e69ae96ffb203996705cd7c"
+dependencies = [
+ "anyhow",
+ "cid 0.9.0",
+ "core2",
+ "multibase 0.9.1",
+ "multihash 0.17.0",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "libipld-json"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18aa481a87f084d98473dd9ece253a9569c762b75f6bbba8217d54e48c9d63b3"
 dependencies = [
- "libipld-core",
+ "libipld-core 0.14.0",
  "multihash 0.16.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "libipld-json"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc549d7c70f9a401031fcb6d3bf7eccfe91bcad938f7485f71ee8ba9f79c1e79"
+dependencies = [
+ "libipld-core 0.15.0",
+ "multihash 0.17.0",
  "serde",
  "serde_json",
 ]
@@ -2491,7 +2586,27 @@ version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "852c011562ae5059b67c3a917f9f5945af5a68df8e39ede4444fff33274d25e2"
 dependencies = [
- "libipld-core",
+ "libipld-core 0.14.0",
+]
+
+[[package]]
+name = "libipld-macro"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4c7ccd89e54f2796cf3f99aabeea7a7751d418df504926544f28348d3c890c7"
+dependencies = [
+ "libipld-core 0.15.0",
+]
+
+[[package]]
+name = "libipld-pb"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd84ee8b7e283c81b28ecf46e07c31a524a2cd35ec4e87833733a18218c17ccb"
+dependencies = [
+ "libipld-core 0.15.0",
+ "prost",
+ "thiserror",
 ]
 
 [[package]]
@@ -3293,6 +3408,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78803b62cbf1f46fde80d7c0e803111524b9877184cfe7c3033659490ac7a7da"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "prost"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b82eaa1d779e9a4bc1c3217db8ffbeabaae1dca241bf70183242128d48681cd"
+dependencies = [
+ "bytes",
+ "prost-derive",
+]
+
+[[package]]
+name = "prost-derive"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5d2d8d10f3c6ded6da8b05b5fb3b8a5082514344d56c9f871412d29b4e075b4"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -4600,7 +4738,7 @@ checksum = "0982f62c7860922026a9d9edc6c604de79693ee4c5c6bd65be11e2ff66b1df09"
 dependencies = [
  "base64 0.12.3",
  "chrono",
- "libipld",
+ "libipld 0.14.0",
  "serde",
  "serde_json",
  "serde_with 1.14.0",
@@ -4626,7 +4764,7 @@ dependencies = [
  "chrono",
  "flate2",
  "iref",
- "libipld",
+ "libipld 0.14.0",
  "multihash 0.16.3",
  "reqwest",
  "serde",
