@@ -26,6 +26,8 @@ rand = { version = "0.8.5", features = ["small_rng"] }
 sqlx = { version = "=0.7.0", features = ["sqlite", "runtime-tokio"] }
 tokio = { version = "1.29.1", features = ["rt", "rt-multi-thread", "macros"] }
 hex = "0.4.3"
+libipld = "0.15.0"
+dag-jose = "0.1.2"
 
 [build-dependencies]
 clap = { version = "4", features = ["derive"] }
