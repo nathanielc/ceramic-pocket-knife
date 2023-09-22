@@ -3,6 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 use libp2p::{
     core::upgrade::Version,
+    dns,
     futures::StreamExt,
     identify,
     identity::{self, Keypair},
@@ -49,6 +50,10 @@ pub async fn run(op: Operation) -> Result<()> {
             let mut count = 0;
             loop {
                 match swarm.select_next_some().await {
+                    SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
+                        println!("failed to connect to {peer_id:?}: {error}");
+                        break;
+                    }
                     SwarmEvent::Behaviour(ping::Event { peer, result, .. }) => {
                         match result {
                             Ok(duration) => println!("response from {peer} in {duration:?}"),
@@ -82,27 +87,30 @@ pub async fn run(op: Operation) -> Result<()> {
 
             loop {
                 match swarm.select_next_some().await {
-                    SwarmEvent::Behaviour(event) => {
-                        match event {
-                            identify::Event::Received { peer_id, info } => {
-                                let public_key_type = info.public_key.key_type();
-                                let protocol_version = info.protocol_version;
-                                let agent_version = info.agent_version;
-                                let listen_addrs = info
-                                    .listen_addrs
-                                    .iter()
-                                    .map(ToString::to_string)
-                                    .collect::<Vec<String>>()
-                                    .join("\n\t");
-                                let protocols = info
-                                    .protocols
-                                    .iter()
-                                    .map(ToString::to_string)
-                                    .collect::<Vec<String>>()
-                                    .join("\n\t");
-                                let observed_address = info.observed_addr;
-                                println!(
-                                    "Peer: {peer_id}
+                    SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
+                        println!("failed to connect to {peer_id:?}: {error}");
+                        break;
+                    }
+                    SwarmEvent::Behaviour(event) => match event {
+                        identify::Event::Received { peer_id, info } => {
+                            let public_key_type = info.public_key.key_type();
+                            let protocol_version = info.protocol_version;
+                            let agent_version = info.agent_version;
+                            let listen_addrs = info
+                                .listen_addrs
+                                .iter()
+                                .map(ToString::to_string)
+                                .collect::<Vec<String>>()
+                                .join("\n\t");
+                            let protocols = info
+                                .protocols
+                                .iter()
+                                .map(ToString::to_string)
+                                .collect::<Vec<String>>()
+                                .join("\n\t");
+                            let observed_address = info.observed_addr;
+                            println!(
+                                "Peer: {peer_id}
 Public Key Type: {public_key_type}
 Protocol Version: {protocol_version}
 Agent Version: {agent_version}
@@ -111,16 +119,14 @@ Listen Addresses:
 \t{listen_addrs}
 Protocols:
 \t{protocols}"
-                                )
-                            }
-                            identify::Event::Sent { .. } => {}
-                            identify::Event::Pushed { .. } => {}
-                            identify::Event::Error { error, .. } => {
-                                println!("Error getting peer identity: {error}")
-                            }
+                            );
+                            break;
                         }
-                        break;
-                    }
+                        identify::Event::Error { error, .. } => {
+                            println!("Error getting peer identity: {error}")
+                        }
+                        _ => {}
+                    },
                     _ => {}
                 }
             }
@@ -138,6 +144,12 @@ where
         .upgrade(Version::V1Lazy)
         .authenticate(noise::Config::new(&local_key)?)
         .multiplex(yamux::Config::default())
+        .boxed();
+
+    let dns_cfg = dns::ResolverConfig::cloudflare();
+    let dns_opts = dns::ResolverOpts::default();
+    let transport = dns::TokioDnsConfig::custom(transport, dns_cfg, dns_opts)
+        .unwrap()
         .boxed();
 
     let mut swarm = SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id)
