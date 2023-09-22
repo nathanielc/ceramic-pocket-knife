@@ -1,6 +1,6 @@
 use anyhow::Result;
 use multibase::Base;
-use std::io::{self, Write as _};
+use std::io::{stdin, stdout, Read, Write};
 
 use crate::cli::Command;
 
@@ -54,49 +54,47 @@ impl TryFrom<Command> for Operation {
 }
 
 pub fn run(op: Operation) -> Result<()> {
-    let lines = io::stdin().lines();
-    for line in lines {
-        do_line(&line?, &op)?;
-    }
-    Ok(())
-}
-
-fn do_line(line: &str, op: &Operation) -> Result<()> {
-    let data: Vec<u8> = match op {
+    match op {
         Operation::Guess => {
-            if let Some((base, is_multibase)) = guess(line) {
-                format!("{:?} is_multibase: {}", base, is_multibase)
-                    .as_bytes()
-                    .to_vec()
-            } else {
-                Vec::default()
+            if let Some((base, is_multibase)) = guess(input_utf8()?.trim_end()) {
+                println!("{:?} is_multibase: {}", base, is_multibase)
             }
         }
-        Operation::Decode => multibase::decode(line)?.1,
-        Operation::Base2 => encode(line, Base::Base2)?,
-        Operation::Base8 => encode(line, Base::Base8)?,
-        Operation::Base10 => encode(line, Base::Base10)?,
-        Operation::Base16 => encode(line, Base::Base16Lower)?,
-        Operation::Base16Upper => encode(line, Base::Base16Upper)?,
-        Operation::Base32Hex => encode(line, Base::Base32HexLower)?,
-        Operation::Base32HexUpper => encode(line, Base::Base32HexUpper)?,
-        Operation::Base32 => encode(line, Base::Base32Lower)?,
-        Operation::Base32Upper => encode(line, Base::Base32Upper)?,
-        Operation::Base32Z => encode(line, Base::Base32Z)?,
-        Operation::Base36 => encode(line, Base::Base36Lower)?,
-        Operation::Base36Upper => encode(line, Base::Base36Upper)?,
-        Operation::Base58Flickr => encode(line, Base::Base58Flickr)?,
-        Operation::Base58Btc => encode(line, Base::Base58Btc)?,
-        Operation::Base64 => encode(line, Base::Base64)?,
-        Operation::Base64Url => encode(line, Base::Base64Url)?,
+        Operation::Decode => stdout().write_all(&multibase::decode(input_utf8()?.trim_end())?.1)?,
+        Operation::Base2 => encode(Base::Base2)?,
+        Operation::Base8 => encode(Base::Base8)?,
+        Operation::Base10 => encode(Base::Base10)?,
+        Operation::Base16 => encode(Base::Base16Lower)?,
+        Operation::Base16Upper => encode(Base::Base16Upper)?,
+        Operation::Base32Hex => encode(Base::Base32HexLower)?,
+        Operation::Base32HexUpper => encode(Base::Base32HexUpper)?,
+        Operation::Base32 => encode(Base::Base32Lower)?,
+        Operation::Base32Upper => encode(Base::Base32Upper)?,
+        Operation::Base32Z => encode(Base::Base32Z)?,
+        Operation::Base36 => encode(Base::Base36Lower)?,
+        Operation::Base36Upper => encode(Base::Base36Upper)?,
+        Operation::Base58Flickr => encode(Base::Base58Flickr)?,
+        Operation::Base58Btc => encode(Base::Base58Btc)?,
+        Operation::Base64 => encode(Base::Base64)?,
+        Operation::Base64Url => encode(Base::Base64Url)?,
     };
-    std::io::stdout().write_all(&data)?;
-    println!();
     Ok(())
 }
 
-fn encode(line: &str, base: Base) -> Result<Vec<u8>> {
-    Ok(multibase::encode(base, line.as_bytes()).into())
+fn input_bytes() -> Result<Vec<u8>> {
+    let mut data = Vec::new();
+    stdin().read_to_end(&mut data)?;
+    Ok(data)
+}
+fn input_utf8() -> Result<String> {
+    let mut data = Vec::new();
+    stdin().read_to_end(&mut data)?;
+    Ok(String::from_utf8(data)?)
+}
+
+fn encode(base: Base) -> Result<()> {
+    println!("{}", multibase::encode(base, input_bytes()?));
+    Ok(())
 }
 
 fn guess(data: &str) -> Option<(Base, bool)> {
