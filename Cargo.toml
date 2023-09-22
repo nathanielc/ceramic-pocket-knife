@@ -24,10 +24,19 @@ multibase = "0.9"
 multicodec = "0.1.0"
 rand = { version = "0.8.5", features = ["small_rng"] }
 sqlx = { version = "=0.7.0", features = ["sqlite", "runtime-tokio"] }
-tokio = { version = "1.29.1", features = ["rt", "rt-multi-thread", "macros"] }
+tokio = { version = "1.32", features = ["rt", "rt-multi-thread", "macros"] }
 hex = "0.4.3"
 libipld = "0.15.0"
 dag-jose = "0.1.2"
+libp2p = { version = "0.52.3", features = [
+    "identify",
+    "macros",
+    "noise",
+    "ping",
+    "tcp",
+    "tokio",
+    "yamux",
+] }
 
 [build-dependencies]
 clap = { version = "4", features = ["derive"] }

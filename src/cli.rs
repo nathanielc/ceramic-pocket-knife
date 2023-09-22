@@ -81,6 +81,10 @@ pub enum Command {
     DagJsonToCbor,
     /// Convert DAG-JOSE data to DAG-JSON
     DagJoseToJson,
+
+    // ---------------- Libp2p Tools ----------------------------//
+    P2pPing(PingArgs),
+    P2pIdentify(IdentifyArgs),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -191,4 +195,29 @@ pub struct CidInspectArgs {
     /// CID
     #[arg()]
     pub cid: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct PingArgs {
+    /// Multiaddr for Peer
+    #[arg()]
+    pub peer_addr: String,
+
+    /// Number of pings to send before exiting.
+    #[arg(short, long, default_value_t = usize::MAX)]
+    pub count: usize,
+
+    /// Interval in seconds between pings
+    #[arg(short, long, default_value_t = 1)]
+    pub interval: u32,
+
+    /// Timeout in seconds to wait for a pong
+    #[arg(short, long, default_value_t = 20)]
+    pub timeout: u32,
+}
+#[derive(Args, Debug, Clone)]
+pub struct IdentifyArgs {
+    /// Multiaddr for Peer
+    #[arg()]
+    pub peer_addr: String,
 }

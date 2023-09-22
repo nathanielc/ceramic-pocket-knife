@@ -2,6 +2,7 @@ mod ceramic;
 mod cli;
 mod ipld;
 mod multibase;
+mod p2p;
 
 pub use cli::Cli;
 
@@ -30,9 +31,15 @@ pub async fn run() -> anyhow::Result<()> {
         }
         Err(cmd) => cmd,
     };
-    let _cmd = match ceramic::Operation::try_from(cmd) {
+    let cmd = match ceramic::Operation::try_from(cmd) {
         Ok(op) => {
             return ceramic::run(op).await;
+        }
+        Err(cmd) => cmd,
+    };
+    let _cmd = match p2p::Operation::try_from(cmd) {
+        Ok(op) => {
+            return p2p::run(op).await;
         }
         Err(cmd) => cmd,
     };
