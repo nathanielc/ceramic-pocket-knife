@@ -52,6 +52,9 @@ pub enum Command {
     /// convert stdin to base64-url       u rfc4648 no padding
     Base64Url,
 
+    // ---------------- Multihash Tools ----------------------------//
+    MultihashInspect,
+
     // ---------------- Ceramic Tools ----------------------------//
     /// Create a stream ID
     StreamIdCreate(StreamIdCreateArgs),
