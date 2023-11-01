@@ -2,6 +2,7 @@ mod ceramic;
 mod cli;
 mod ipld;
 mod multibase;
+mod multihash;
 mod p2p;
 
 pub use cli::Cli;
@@ -34,6 +35,12 @@ pub async fn run() -> anyhow::Result<()> {
     let cmd = match ceramic::Operation::try_from(cmd) {
         Ok(op) => {
             return ceramic::run(op).await;
+        }
+        Err(cmd) => cmd,
+    };
+    let cmd = match multihash::Operation::try_from(cmd) {
+        Ok(op) => {
+            return multihash::run(op).await;
         }
         Err(cmd) => cmd,
     };

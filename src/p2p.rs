@@ -2,14 +2,12 @@ use std::time::Duration;
 
 use anyhow::Result;
 use libp2p::{
-    core::upgrade::Version,
-    dns,
     futures::StreamExt,
     identify,
     identity::{self, Keypair},
     noise, ping,
-    swarm::{NetworkBehaviour, SwarmBuilder, SwarmEvent},
-    tcp, yamux, Multiaddr, PeerId, Swarm, Transport,
+    swarm::{NetworkBehaviour, SwarmEvent},
+    tcp, yamux, Multiaddr, Swarm, SwarmBuilder,
 };
 
 use crate::cli::{Command, IdentifyArgs, PingArgs};
@@ -138,22 +136,16 @@ async fn p2p_swarm<B>(local_key: Keypair, behaviour: B) -> Result<Swarm<B>>
 where
     B: NetworkBehaviour,
 {
-    let local_peer_id = PeerId::from(local_key.public());
-
-    let transport = tcp::tokio::Transport::default()
-        .upgrade(Version::V1Lazy)
-        .authenticate(noise::Config::new(&local_key)?)
-        .multiplex(yamux::Config::default())
-        .boxed();
-
-    let dns_cfg = dns::ResolverConfig::cloudflare();
-    let dns_opts = dns::ResolverOpts::default();
-    let transport = dns::TokioDnsConfig::custom(transport, dns_cfg, dns_opts)
-        .unwrap()
-        .boxed();
-
-    let mut swarm = SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id)
-        .idle_connection_timeout(Duration::from_secs(60)) // For illustrative purposes, keep idle connections alive for a minute so we can observe a few pings.
+    let mut swarm = SwarmBuilder::with_existing_identity(local_key)
+        .with_tokio()
+        .with_tcp(
+            tcp::Config::default(),
+            noise::Config::new,
+            yamux::Config::default,
+        )?
+        .with_quic()
+        .with_behaviour(|_| behaviour)?
+        .with_swarm_config(|config| config.with_idle_connection_timeout(Duration::from_secs(30)))
         .build();
 
     // Tell the swarm to listen on all interfaces and a random, OS-assigned

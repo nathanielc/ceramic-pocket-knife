@@ -16,19 +16,25 @@ name = "cpk"
 anyhow = "1"
 ceramic-core = { git = "https://github.com/3box/rust-ceramic", branch = "main" }
 recon = { git = "https://github.com/3box/rust-ceramic", branch = "main" }
-cid = "0.9"
+cid = "0.10"
 clap = { version = "4", features = ["derive"] }
 clap_complete_command = "0.5.1"
 libp2p-identity = { version = "0.1.2", features = ["peerid", "ed25519"] }
 multibase = "0.9"
+multihash = "0.18.1"
 multicodec = "0.1.0"
 rand = { version = "0.8.5", features = ["small_rng"] }
 sqlx = { version = "=0.7.0", features = ["sqlite", "runtime-tokio"] }
-tokio = { version = "1.32", features = ["rt", "rt-multi-thread", "macros"] }
+tokio = { version = "1.32", features = [
+    "rt",
+    "rt-multi-thread",
+    "macros",
+    "io-std",
+] }
 hex = "0.4.3"
-libipld = "0.15.0"
-dag-jose = "0.1.2"
-libp2p = { version = "0.52.3", features = [
+libipld = "0.16.0"
+dag-jose = "0.1.3"
+libp2p = { version = "0.52.4", features = [
     "dns",
     "ed25519",
     "identify",
@@ -37,6 +43,7 @@ libp2p = { version = "0.52.3", features = [
     "rsa",
     "tcp",
     "tokio",
+    "quic",
     "yamux",
 ] }
 env_logger = "0.10.0"
