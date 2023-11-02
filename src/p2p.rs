@@ -144,6 +144,7 @@ where
             yamux::Config::default,
         )?
         .with_quic()
+        .with_dns()?
         .with_behaviour(|_| behaviour)?
         .with_swarm_config(|config| config.with_idle_connection_timeout(Duration::from_secs(30)))
         .build();
