@@ -40,10 +40,12 @@ libp2p = { version = "0.52.4", features = [
     "identify",
     "noise",
     "ping",
+    "quic",
     "rsa",
     "tcp",
+    "tls",
     "tokio",
-    "quic",
+    "websocket",
     "yamux",
 ] }
 env_logger = "0.10.0"
