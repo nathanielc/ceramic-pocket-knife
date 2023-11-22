@@ -7,7 +7,7 @@ use libp2p::{
     identity::{self, Keypair},
     noise, ping,
     swarm::{NetworkBehaviour, SwarmEvent},
-    tcp, yamux, Multiaddr, Swarm, SwarmBuilder,
+    tcp, tls, yamux, Multiaddr, Swarm, SwarmBuilder,
 };
 
 use crate::cli::{Command, IdentifyArgs, PingArgs};
@@ -145,6 +145,11 @@ where
         )?
         .with_quic()
         .with_dns()?
+        .with_websocket(
+            (tls::Config::new, noise::Config::new),
+            yamux::Config::default,
+        )
+        .await?
         .with_behaviour(|_| behaviour)?
         .with_swarm_config(|config| config.with_idle_connection_timeout(Duration::from_secs(30)))
         .build();
