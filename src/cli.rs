@@ -126,6 +126,9 @@ pub struct EventIdGenerateArgs {
     /// Network
     #[arg(long, default_value = "testnet-clay", value_enum)]
     pub network: Network,
+    /// Local Network ID, only used when network is local. If not set a random ID is used.
+    #[arg(long)]
+    pub local_network_id: Option<u32>,
     /// Sort Key, if not set generates random value.
     #[arg(long)]
     pub sort_key: Option<String>,

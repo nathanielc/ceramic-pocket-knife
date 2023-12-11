@@ -72,7 +72,10 @@ pub async fn run(op: Operation) -> Result<()> {
             println!("{}", stream_id.to_string());
         }
         Operation::EventIdGenerate(args) => {
-            let network = &convert_network(args.network, Some(thread_rng().gen()));
+            let network = &convert_network(
+                args.network,
+                Some(args.local_network_id.unwrap_or_else(|| thread_rng().gen())),
+            );
             let event_id = random_event_id(
                 &network,
                 args.sort_key,

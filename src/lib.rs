@@ -1,5 +1,5 @@
 mod ceramic;
-mod cli;
+pub mod cli;
 mod ipld;
 mod multibase;
 mod multihash;
@@ -7,11 +7,9 @@ mod p2p;
 
 pub use cli::Cli;
 
-use clap::{CommandFactory, Parser};
+use clap::CommandFactory;
 
-pub async fn run() -> anyhow::Result<()> {
-    let args = cli::Cli::parse();
-
+pub async fn run(args: Cli) -> anyhow::Result<()> {
     // Generate shell completetions
     if let cli::Command::Completion(args) = &args.command {
         args.shell
