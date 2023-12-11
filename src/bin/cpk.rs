@@ -1,5 +1,8 @@
+use clap::Parser;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    ceramic_pocket_knife::run().await
+    let args = ceramic_pocket_knife::Cli::parse();
+    ceramic_pocket_knife::run(args).await
 }
