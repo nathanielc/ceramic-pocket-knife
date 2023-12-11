@@ -1,5 +1,5 @@
 use anyhow::Result;
-use libp2p::futures::pin_mut;
+use futures::pin_mut;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::cli::Command;

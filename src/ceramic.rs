@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use ceramic_core::{Cid, EventId, Interest, StreamId, StreamIdType};
-use libp2p::futures::pin_mut;
+use futures::pin_mut;
 use libp2p_identity::PeerId;
 use multibase::Base;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -16,7 +16,7 @@ use crate::{
         SqlDbGenerateArgs, StreamIdCreateArgs, StreamIdGenerateArgs, StreamIdInspectArgs,
         StreamType,
     },
-    ipld::random_cid,
+    random_cid,
 };
 
 pub enum Operation {
@@ -79,7 +79,7 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
                 Some(args.local_network_id.unwrap_or_else(|| thread_rng().gen())),
             );
             let event_id = random_event_id(
-                &network,
+                network,
                 args.sort_key,
                 args.sort_value,
                 args.controller,
@@ -106,7 +106,7 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
             thread_rng().fill(&mut buffer);
             stdout
                 .write_all(
-                    format!("did:key:{}", multibase::encode(Base::Base58Btc, &buffer)).as_bytes(),
+                    format!("did:key:{}", multibase::encode(Base::Base58Btc, buffer)).as_bytes(),
                 )
                 .await?;
         }
@@ -144,7 +144,7 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
             let mut batch = Vec::with_capacity(1000);
             for _ in 0..args.count {
                 let event_id = random_event_id(
-                    &network,
+                    network,
                     Some(args.sort_key.clone()),
                     args.sort_value.clone(),
                     args.controller.clone(),
@@ -238,7 +238,7 @@ async fn insert_batch(
                         // values may matter.
                         "INSERT INTO recon ( sort_key, key, ahash_0, ahash_1, ahash_2, ahash_3, ahash_4, ahash_5, ahash_6, ahash_7, block_retrieved) ",
                     );
-    query_builder.push_values(batch.into_iter(), |mut b, event| {
+    query_builder.push_values(batch.iter(), |mut b, event| {
         let hash = Sha256a::digest(event);
         b.push_bind(sort_key)
             .push_bind(event.as_bytes())

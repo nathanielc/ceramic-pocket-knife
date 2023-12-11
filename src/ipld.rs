@@ -1,22 +1,21 @@
 use std::{io::Cursor, str::FromStr};
 
 use anyhow::Result;
-use cid::{
-    multihash::{Code, MultihashDigest},
-    Cid,
-};
+use cid::Cid;
 use dag_jose::DagJoseCodec;
+use futures::pin_mut;
 use libipld::{
     cbor::DagCborCodec,
     json::DagJsonCodec,
     prelude::{Decode, Encode},
     Ipld,
 };
-use libp2p::futures::pin_mut;
-use rand::{thread_rng, Rng};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-use crate::cli::{CidInspectArgs, Command};
+use crate::{
+    cli::{CidInspectArgs, Command},
+    random_cid,
+};
 
 pub enum Operation {
     CidGenerate,
@@ -37,13 +36,6 @@ impl TryFrom<Command> for Operation {
             _ => Err(value),
         }
     }
-}
-
-pub fn random_cid() -> Cid {
-    let mut data = [0u8; 8];
-    thread_rng().fill(&mut data);
-    let hash = Code::Sha2_256.digest(&data);
-    Cid::new_v1(0x00, hash)
 }
 
 pub async fn run(op: Operation, stdin: impl AsyncRead, stdout: impl AsyncWrite) -> Result<()> {
