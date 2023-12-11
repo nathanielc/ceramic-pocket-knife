@@ -756,6 +756,7 @@ dependencies = [
  "clap_complete_command",
  "dag-jose",
  "env_logger",
+ "futures",
  "hex",
  "libipld 0.16.0",
  "libp2p",
