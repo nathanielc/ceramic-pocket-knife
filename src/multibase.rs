@@ -1,6 +1,7 @@
 use anyhow::Result;
+use libp2p::futures::pin_mut;
 use multibase::Base;
-use std::io::{stdin, stdout, Read, Write};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::cli::Command;
 
@@ -53,47 +54,59 @@ impl TryFrom<Command> for Operation {
     }
 }
 
-pub fn run(op: Operation) -> Result<()> {
+pub async fn run(op: Operation, stdin: impl AsyncRead, stdout: impl AsyncWrite) -> Result<()> {
+    pin_mut!(stdout);
     match op {
         Operation::Guess => {
-            if let Some((base, is_multibase)) = guess(input_utf8()?.trim_end()) {
-                println!("{:?} is_multibase: {}", base, is_multibase)
+            if let Some((base, is_multibase)) = guess(input_utf8(stdin).await?.trim_end()) {
+                stdout
+                    .write_all(format!("{:?} is_multibase: {}", base, is_multibase).as_bytes())
+                    .await?
             }
         }
-        Operation::Decode => stdout().write_all(&multibase::decode(input_utf8()?.trim_end())?.1)?,
-        Operation::Base2 => encode(Base::Base2)?,
-        Operation::Base8 => encode(Base::Base8)?,
-        Operation::Base10 => encode(Base::Base10)?,
-        Operation::Base16 => encode(Base::Base16Lower)?,
-        Operation::Base16Upper => encode(Base::Base16Upper)?,
-        Operation::Base32Hex => encode(Base::Base32HexLower)?,
-        Operation::Base32HexUpper => encode(Base::Base32HexUpper)?,
-        Operation::Base32 => encode(Base::Base32Lower)?,
-        Operation::Base32Upper => encode(Base::Base32Upper)?,
-        Operation::Base32Z => encode(Base::Base32Z)?,
-        Operation::Base36 => encode(Base::Base36Lower)?,
-        Operation::Base36Upper => encode(Base::Base36Upper)?,
-        Operation::Base58Flickr => encode(Base::Base58Flickr)?,
-        Operation::Base58Btc => encode(Base::Base58Btc)?,
-        Operation::Base64 => encode(Base::Base64)?,
-        Operation::Base64Url => encode(Base::Base64Url)?,
+        Operation::Decode => {
+            stdout
+                .write_all(&multibase::decode(input_utf8(stdin).await?.trim_end())?.1)
+                .await?
+        }
+        Operation::Base2 => encode(stdin, stdout, Base::Base2).await?,
+        Operation::Base8 => encode(stdin, stdout, Base::Base8).await?,
+        Operation::Base10 => encode(stdin, stdout, Base::Base10).await?,
+        Operation::Base16 => encode(stdin, stdout, Base::Base16Lower).await?,
+        Operation::Base16Upper => encode(stdin, stdout, Base::Base16Upper).await?,
+        Operation::Base32Hex => encode(stdin, stdout, Base::Base32HexLower).await?,
+        Operation::Base32HexUpper => encode(stdin, stdout, Base::Base32HexUpper).await?,
+        Operation::Base32 => encode(stdin, stdout, Base::Base32Lower).await?,
+        Operation::Base32Upper => encode(stdin, stdout, Base::Base32Upper).await?,
+        Operation::Base32Z => encode(stdin, stdout, Base::Base32Z).await?,
+        Operation::Base36 => encode(stdin, stdout, Base::Base36Lower).await?,
+        Operation::Base36Upper => encode(stdin, stdout, Base::Base36Upper).await?,
+        Operation::Base58Flickr => encode(stdin, stdout, Base::Base58Flickr).await?,
+        Operation::Base58Btc => encode(stdin, stdout, Base::Base58Btc).await?,
+        Operation::Base64 => encode(stdin, stdout, Base::Base64).await?,
+        Operation::Base64Url => encode(stdin, stdout, Base::Base64Url).await?,
     };
     Ok(())
 }
 
-fn input_bytes() -> Result<Vec<u8>> {
+async fn input_bytes(stdin: impl AsyncRead) -> Result<Vec<u8>> {
+    pin_mut!(stdin);
     let mut data = Vec::new();
-    stdin().read_to_end(&mut data)?;
+    stdin.read_to_end(&mut data).await?;
     Ok(data)
 }
-fn input_utf8() -> Result<String> {
+async fn input_utf8(stdin: impl AsyncRead) -> Result<String> {
+    pin_mut!(stdin);
     let mut data = Vec::new();
-    stdin().read_to_end(&mut data)?;
+    stdin.read_to_end(&mut data).await?;
     Ok(String::from_utf8(data)?)
 }
 
-fn encode(base: Base) -> Result<()> {
-    println!("{}", multibase::encode(base, input_bytes()?));
+async fn encode(stdin: impl AsyncRead, stdout: impl AsyncWrite, base: Base) -> Result<()> {
+    pin_mut!(stdout);
+    stdout
+        .write_all(multibase::encode(base, input_bytes(stdin).await?).as_bytes())
+        .await?;
     Ok(())
 }
 

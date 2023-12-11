@@ -1,7 +1,4 @@
-use std::{
-    io::{self, Cursor, Read},
-    str::FromStr,
-};
+use std::{io::Cursor, str::FromStr};
 
 use anyhow::Result;
 use cid::{
@@ -15,7 +12,9 @@ use libipld::{
     prelude::{Decode, Encode},
     Ipld,
 };
+use libp2p::futures::pin_mut;
 use rand::{thread_rng, Rng};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::cli::{CidInspectArgs, Command};
 
@@ -47,38 +46,44 @@ pub fn random_cid() -> Cid {
     Cid::new_v1(0x00, hash)
 }
 
-pub async fn run(op: Operation) -> Result<()> {
+pub async fn run(op: Operation, stdin: impl AsyncRead, stdout: impl AsyncWrite) -> Result<()> {
+    pin_mut!(stdin, stdout);
     match op {
         Operation::CidGenerate => {
             let cid = random_cid();
-            println!("{}", cid);
+            stdout.write_all(cid.to_string().as_bytes()).await?;
         }
         Operation::CidInspect(args) => {
             let cid = Cid::from_str(&args.cid)?;
-            println!(
-                "CID: {}\nVersion: {:?}\nCodec: 0x{:x}\nHash Code: 0x{:x}\nHash: 0x{}\n",
-                cid.into_v1()?,
-                cid.version(),
-                cid.codec(),
-                cid.hash().code(),
-                hex::encode(cid.hash().digest())
-            );
+            stdout
+                .write_all(
+                    format!(
+                        "CID: {}\nVersion: {:?}\nCodec: 0x{:x}\nHash Code: 0x{:x}\nHash: 0x{}\n",
+                        cid.into_v1()?,
+                        cid.version(),
+                        cid.codec(),
+                        cid.hash().code(),
+                        hex::encode(cid.hash().digest())
+                    )
+                    .as_bytes(),
+                )
+                .await?;
         }
         Operation::DagJsonToCbor => {
             let mut data = Vec::new();
-            io::stdin().read_to_end(&mut data)?;
+            stdin.read_to_end(&mut data).await?;
             let dag_data = Ipld::decode(DagJsonCodec, &mut Cursor::new(data))?;
             let mut out = Vec::new();
             dag_data.encode(DagCborCodec, &mut out)?;
-            println!("{}", hex::encode(out));
+            stdout.write_all(hex::encode(out).as_bytes()).await?;
         }
         Operation::DagJoseToJson => {
             let mut data = Vec::new();
-            io::stdin().read_to_end(&mut data)?;
+            stdin.read_to_end(&mut data).await?;
             let dag_data = Ipld::decode(DagJoseCodec, &mut Cursor::new(data))?;
             let mut out = Vec::new();
             dag_data.encode(DagJsonCodec, &mut out)?;
-            println!("{}", String::from_utf8(out)?);
+            stdout.write_all(&out).await?;
         }
     };
     Ok(())

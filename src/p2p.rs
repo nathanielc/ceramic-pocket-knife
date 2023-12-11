@@ -2,13 +2,14 @@ use std::time::Duration;
 
 use anyhow::Result;
 use libp2p::{
-    futures::StreamExt,
+    futures::{pin_mut, StreamExt},
     identify,
     identity::{self, Keypair},
     noise, ping,
     swarm::{NetworkBehaviour, SwarmEvent},
     tcp, tls, yamux, Multiaddr, Swarm, SwarmBuilder,
 };
+use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
 use crate::cli::{Command, IdentifyArgs, PingArgs};
 
@@ -29,7 +30,8 @@ impl TryFrom<Command> for Operation {
     }
 }
 
-pub async fn run(op: Operation) -> Result<()> {
+pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite) -> Result<()> {
+    pin_mut!(stdout);
     match op {
         Operation::Ping(args) => {
             let local_key = identity::Keypair::generate_ed25519();
@@ -49,14 +51,26 @@ pub async fn run(op: Operation) -> Result<()> {
             loop {
                 match swarm.select_next_some().await {
                     SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
-                        println!("failed to connect to {peer_id:?}: {error}");
+                        stdout
+                            .write_all(
+                                format!("failed to connect to {peer_id:?}: {error}\n").as_bytes(),
+                            )
+                            .await?;
                         break;
                     }
                     SwarmEvent::Behaviour(ping::Event { peer, result, .. }) => {
                         match result {
-                            Ok(duration) => println!("response from {peer} in {duration:?}"),
+                            Ok(duration) => {
+                                stdout
+                                    .write_all(
+                                        format!("response from {peer} in {duration:?}").as_bytes(),
+                                    )
+                                    .await?
+                            }
                             Err(err) => {
-                                println!("ping failed {err}");
+                                stdout
+                                    .write_all(format!("ping failed {err}").as_bytes())
+                                    .await?;
                                 break;
                             }
                         };
@@ -86,7 +100,11 @@ pub async fn run(op: Operation) -> Result<()> {
             loop {
                 match swarm.select_next_some().await {
                     SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
-                        println!("failed to connect to {peer_id:?}: {error}");
+                        stdout
+                            .write_all(
+                                format!("failed to connect to {peer_id:?}: {error}").as_bytes(),
+                            )
+                            .await?;
                         break;
                     }
                     SwarmEvent::Behaviour(event) => match event {
@@ -107,8 +125,10 @@ pub async fn run(op: Operation) -> Result<()> {
                                 .collect::<Vec<String>>()
                                 .join("\n\t");
                             let observed_address = info.observed_addr;
-                            println!(
-                                "Peer: {peer_id}
+                            stdout
+                                .write_all(
+                                    format!(
+                                        "Peer: {peer_id}
 Public Key Type: {public_key_type}
 Protocol Version: {protocol_version}
 Agent Version: {agent_version}
@@ -117,11 +137,18 @@ Listen Addresses:
 \t{listen_addrs}
 Protocols:
 \t{protocols}"
-                            );
+                                    )
+                                    .as_bytes(),
+                                )
+                                .await?;
                             break;
                         }
                         identify::Event::Error { error, .. } => {
-                            println!("Error getting peer identity: {error}")
+                            stdout
+                                .write_all(
+                                    format!("Error getting peer identity: {error}").as_bytes(),
+                                )
+                                .await?
                         }
                         _ => {}
                     },

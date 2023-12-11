@@ -1,15 +1,14 @@
-use std::{
-    io::{stdout, Write},
-    str::FromStr,
-};
+use std::str::FromStr;
 
 use anyhow::Result;
 use ceramic_core::{Cid, EventId, Interest, StreamId, StreamIdType};
+use libp2p::futures::pin_mut;
 use libp2p_identity::PeerId;
 use multibase::Base;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use recon::{AssociativeHash, Key, Sha256a};
 use sqlx::{Connection, QueryBuilder, Sqlite, SqliteConnection};
+use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
 use crate::{
     cli::{
@@ -51,25 +50,28 @@ impl TryFrom<Command> for Operation {
     }
 }
 
-pub async fn run(op: Operation) -> Result<()> {
+pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite) -> Result<()> {
+    pin_mut!(stdout);
     match op {
         Operation::StreamIdCreate(args) => {
             let stream_id = StreamId {
                 r#type: convert_type(args.r#type),
                 cid: Cid::from_str(&args.cid)?,
             };
-            println!("{}", stream_id.to_string());
+            stdout.write_all(stream_id.to_string().as_bytes()).await?;
         }
         Operation::StreamIdInspect(args) => {
             let stream_id = StreamId::from_str(&args.id)?;
-            println!("{:?}", stream_id);
+            stdout
+                .write_all(format!("{:?}", stream_id).as_bytes())
+                .await?;
         }
         Operation::StreamIdGenerate(args) => {
             let stream_id = StreamId {
                 r#type: convert_type(args.r#type),
                 cid: random_cid(),
             };
-            println!("{}", stream_id.to_string());
+            stdout.write_all(stream_id.to_string().as_bytes()).await?;
         }
         Operation::EventIdGenerate(args) => {
             let network = &convert_network(
@@ -83,26 +85,34 @@ pub async fn run(op: Operation) -> Result<()> {
                 args.controller,
                 args.init_id,
             )?;
-            println!("{}", event_id.to_hex());
+            stdout.write_all(event_id.to_hex().as_bytes()).await?;
         }
         Operation::EventIdDecode(args) => {
             let bytes = hex::decode(args.event_id)?;
             let event_id = EventId::from(bytes);
-            println!("{:#?}", event_id);
+            stdout
+                .write_all(format!("{:#?}", event_id).as_bytes())
+                .await?;
         }
         Operation::InterestDecode(args) => {
             let bytes = hex::decode(args.interest)?;
             let interest = Interest::from(bytes);
-            println!("{:#?}", interest);
+            stdout
+                .write_all(format!("{:#?}", interest).as_bytes())
+                .await?;
         }
         Operation::DidKeyGenerate => {
             let mut buffer = [0; 32];
             thread_rng().fill(&mut buffer);
-            println!("did:key:{}", multibase::encode(Base::Base58Btc, &buffer));
+            stdout
+                .write_all(
+                    format!("did:key:{}", multibase::encode(Base::Base58Btc, &buffer)).as_bytes(),
+                )
+                .await?;
         }
         Operation::PeerIdGenerate => {
             let peer_id = PeerId::random();
-            println!("{}", peer_id.to_string());
+            stdout.write_all(peer_id.to_string().as_bytes()).await?;
         }
         Operation::SqlDbGenerate(args) => {
             let network = &convert_network(args.network, Some(thread_rng().gen()));
@@ -115,7 +125,7 @@ pub async fn run(op: Operation) -> Result<()> {
                 "CREATE TABLE IF NOT EXISTS recon (
             sort_key TEXT, -- the field in the event header to sort by e.g. model
             key BLOB, -- network_id sort_value controller StreamID height event_cid
-            ahash_0 INTEGER, -- the ahash is decomposed as [u32; 8] 
+            ahash_0 INTEGER, -- the ahash is decomposed as [u32; 8]
             ahash_1 INTEGER,
             ahash_2 INTEGER,
             ahash_3 INTEGER,
@@ -131,10 +141,8 @@ pub async fn run(op: Operation) -> Result<()> {
             .execute(&mut conn)
             .await?;
 
-            print!("writing {} events", args.count);
-            stdout().flush()?;
             let mut batch = Vec::with_capacity(1000);
-            for i in 0..args.count {
+            for _ in 0..args.count {
                 let event_id = random_event_id(
                     &network,
                     Some(args.sort_key.clone()),
@@ -147,13 +155,8 @@ pub async fn run(op: Operation) -> Result<()> {
                     insert_batch(&mut conn, &args.sort_key, &batch).await?;
                     batch.clear();
                 }
-                if i % 100000 == 0 {
-                    print!(".");
-                    stdout().flush()?;
-                }
             }
             insert_batch(&mut conn, &args.sort_key, &batch).await?;
-            println!("done");
         }
     };
     Ok(())
