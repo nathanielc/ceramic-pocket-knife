@@ -62,6 +62,8 @@ pub enum Command {
     StreamIdInspect(StreamIdInspectArgs),
     /// Generate a random stream ID
     StreamIdGenerate(StreamIdGenerateArgs),
+    /// Generate a random stream with genesis commit
+    StreamCreate(StreamCreateArgs),
     /// Generate a random event ID
     EventIdGenerate(EventIdGenerateArgs),
     /// Decode a hex encoded event ID
@@ -88,6 +90,9 @@ pub enum Command {
     // ---------------- Libp2p Tools ----------------------------//
     P2pPing(PingArgs),
     P2pIdentify(IdentifyArgs),
+
+    // ---------------- CAS Tools ----------------------------//
+    AnchorRequest(AnchorRequestArgs),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -119,6 +124,19 @@ pub struct StreamIdGenerateArgs {
     /// Stream type.
     #[arg(long, value_enum)]
     pub r#type: StreamType,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct StreamCreateArgs {
+    /// Stream type.
+    #[arg(long, value_enum)]
+    pub r#type: StreamType,
+    /// Controller, if not set generates random value.
+    #[arg(long)]
+    pub controller: Option<String>,
+    /// Deterministic stream creation. If disabled, a "unique" field will be added to the genesis commit header.
+    #[arg(short, long, default_value_t = false)]
+    pub deterministic: bool,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -167,6 +185,7 @@ pub enum Network {
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum StreamType {
+    Tile,
     Model,
     Document,
 }
@@ -226,4 +245,26 @@ pub struct IdentifyArgs {
     /// Multiaddr for Peer
     #[arg()]
     pub peer_addr: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct AnchorRequestArgs {
+    /// CAS API URL
+    #[arg(long)]
+    pub url: String,
+    /// Auth controller.
+    #[arg(long)]
+    pub controller: String,
+    /// Auth private key.
+    #[arg(long)]
+    pub private_key: String,
+    /// Stream type.
+    #[arg(long, value_enum)]
+    pub r#type: StreamType,
+    /// Controller, if not set generates random value.
+    #[arg(long)]
+    pub stream_controller: Option<String>,
+    /// Deterministic stream creation. If disabled, a "unique" field will be added to the genesis commit header.
+    #[arg(short, long, default_value_t = false)]
+    pub deterministic: bool,
 }

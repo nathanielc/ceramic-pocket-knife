@@ -1,3 +1,5 @@
+#[cfg(feature = "cas")]
+mod cas;
 #[cfg(feature = "ceramic")]
 mod ceramic;
 #[cfg(feature = "ipld")]
@@ -17,7 +19,7 @@ use clap::CommandFactory;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 pub async fn run(args: Cli, stdin: impl AsyncRead, stdout: impl AsyncWrite) -> anyhow::Result<()> {
-    // Generate shell completetions
+    // Generate shell completions
     if let cli::Command::Completion(args) = &args.command {
         args.shell
             // TODO: use async stdout
@@ -70,6 +72,15 @@ pub async fn run(args: Cli, stdin: impl AsyncRead, stdout: impl AsyncWrite) -> a
     let cmd = match p2p::Operation::try_from(cmd) {
         Ok(op) => {
             return p2p::run(op, stdin, stdout).await;
+        }
+        Err(cmd) => cmd,
+    };
+
+    #[cfg(feature = "cas")]
+    #[allow(unused)]
+    let _cmd = match cas::Operation::try_from(cmd) {
+        Ok(op) => {
+            return cas::run(op).await;
         }
         Err(cmd) => cmd,
     };
