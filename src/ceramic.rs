@@ -3,16 +3,21 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use base64::{engine::general_purpose, Engine};
-use ceramic_core::{Cid, EventId, Interest, StreamId, StreamIdType};
+use chrono::Utc;
 use futures::pin_mut;
+use rand::{distributions::Alphanumeric, random, thread_rng, Rng};
+use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+
+use iroh_car::{CarHeader, CarWriter};
 use libipld::{cbor::DagCborCodec, ipld, prelude::Codec, Ipld, IpldCodec};
 use libp2p_identity::PeerId;
-use multibase::Base;
-use multihash::{Code, MultihashDigest};
-use rand::{distributions::Alphanumeric, random, thread_rng, Rng};
+use multibase::{encode, Base};
+use multihash::{Code::Sha2_256, MultihashDigest};
+
 use recon::{AssociativeHash, Key, Sha256a};
 use sqlx::{Connection, QueryBuilder, Sqlite, SqliteConnection};
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+
+use ceramic_core::{Cid, EventId, Interest, StreamId, StreamIdType};
 
 use crate::{
     cli::{
@@ -80,12 +85,10 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
             stdout.write_all(stream_id.to_string().as_bytes()).await?;
         }
         Operation::StreamCreate(args) => {
-            let (stream_id, genesis_cid, genesis_block) =
-                create_stream(args.r#type, args.controller, args.deterministic).unwrap();
+            let (_, car_bytes) =
+                create_stream_car(args.r#type, args.controller, args.unique).await?;
             stdout
-                .write_all(
-                    format!("{}, {}, {:?}", stream_id, genesis_cid, genesis_block).as_bytes(),
-                )
+                .write_all(encode(Base::from_code(args.base).unwrap(), car_bytes).as_bytes())
                 .await?;
         }
 
@@ -274,10 +277,32 @@ async fn insert_batch(
     Ok(())
 }
 
+/// Create a new Ceramic stream and its corresponding anchor request CAR CID and bytes
+pub async fn create_stream_car(
+    stream_type: StreamType,
+    controller: Option<String>,
+    unique: bool,
+) -> Result<(Cid, Vec<u8>)> {
+    // Create a stream and genesis commit
+    let (stream_id, genesis_cid, genesis_block) =
+        create_stream(stream_type, controller, unique).unwrap();
+    // Create a CAR corresponding to the commit
+    stream_tip_car(
+        stream_id,
+        genesis_cid,
+        genesis_block.clone(),
+        // TODO: Pass a tip when we support writing non-genesis commits
+        genesis_cid,
+        genesis_block,
+    )
+    .await
+}
+
+/// Create a new Ceramic stream
 pub fn create_stream(
     stream_type: StreamType,
     controller: Option<String>,
-    deterministic: bool,
+    unique: bool,
 ) -> Result<(StreamId, Cid, Vec<u8>)> {
     let controller = controller.unwrap_or_else(|| {
         thread_rng()
@@ -286,16 +311,16 @@ pub fn create_stream(
             .map(char::from)
             .collect()
     });
-    let genesis_commit = if deterministic {
+    let genesis_commit = if unique {
         ipld!({
             "header": {
+                "unique": stream_unique_header(),
                 "controllers": [controller]
             }
         })
     } else {
         ipld!({
             "header": {
-                "unique": unique(),
                 "controllers": [controller]
             }
         })
@@ -303,10 +328,7 @@ pub fn create_stream(
     // Deserialize the genesis commit, encode it as CBOR, and compute the CID.
     let ipld_map: BTreeMap<String, Ipld> = libipld::serde::from_ipld(genesis_commit)?;
     let ipld_bytes = DagCborCodec.encode(&ipld_map)?;
-    let genesis_cid = Cid::new_v1(
-        IpldCodec::DagCbor.into(),
-        Code::Sha2_256.digest(&ipld_bytes),
-    );
+    let genesis_cid = Cid::new_v1(IpldCodec::DagCbor.into(), Sha2_256.digest(&ipld_bytes));
     Ok((
         StreamId {
             r#type: convert_type(stream_type),
@@ -317,7 +339,40 @@ pub fn create_stream(
     ))
 }
 
-fn unique() -> String {
+/// Create stream tip CAR bytes for use in anchor requests
+pub async fn stream_tip_car(
+    stream_id: StreamId,
+    genesis_cid: Cid,
+    genesis_block: Vec<u8>,
+    tip_cid: Cid,
+    tip_block: Vec<u8>,
+) -> Result<(Cid, Vec<u8>)> {
+    // Create root block
+    let root_block = ipld!({
+        "timestamp": Utc::now().to_rfc3339(),
+        "streamId": stream_id.to_vec()?,
+        "tip": genesis_cid,
+    });
+    // Encode the root block as CBOR, and compute the CID.
+    let ipld_map: BTreeMap<String, Ipld> = libipld::serde::from_ipld(root_block)?;
+    let ipld_bytes = DagCborCodec.encode(&ipld_map)?;
+    let root_cid = Cid::new_v1(IpldCodec::DagCbor.into(), Sha2_256.digest(&ipld_bytes));
+    let car_header = CarHeader::new_v1(vec![root_cid]);
+    let mut car_writer = CarWriter::new(car_header, Vec::new());
+    // Write root block
+    car_writer.write(root_cid, ipld_bytes).await.unwrap();
+    // Write genesis CID/block
+    car_writer
+        .write(genesis_cid, genesis_block.clone())
+        .await
+        .unwrap();
+    // Write tip CID/block
+    car_writer.write(tip_cid, tip_block).await.unwrap();
+    Ok((root_cid, car_writer.finish().await.unwrap().to_vec()))
+}
+
+/// Generate a random string to add to a stream's genesis commit in order to make it unique.
+fn stream_unique_header() -> String {
     let mut data = [0u8; 8];
     thread_rng().fill(&mut data);
     general_purpose::STANDARD.encode(data)
