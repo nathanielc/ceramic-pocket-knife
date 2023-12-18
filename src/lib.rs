@@ -80,7 +80,7 @@ pub async fn run(args: Cli, stdin: impl AsyncRead, stdout: impl AsyncWrite) -> a
     #[allow(unused)]
     let _cmd = match cas::Operation::try_from(cmd) {
         Ok(op) => {
-            return cas::run(op).await;
+            return cas::run(op, stdin, stdout).await;
         }
         Err(cmd) => cmd,
     };
