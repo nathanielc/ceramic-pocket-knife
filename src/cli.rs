@@ -93,7 +93,9 @@ pub enum Command {
 
     // ---------------- CAS Tools ----------------------------//
     /// Create a Ceramic stream and send its anchor request to a CAS
-    AnchorRequest(AnchorRequestArgs),
+    CasAnchorRequest(CasAnchorRequestArgs),
+    /// Generate Ceramic streams/anchor requests to load a CAS
+    CasLoadGen(CasLoadGenArgs),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -253,7 +255,7 @@ pub struct IdentifyArgs {
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct AnchorRequestArgs {
+pub struct CasAnchorRequestArgs {
     /// CAS API URL
     #[arg(long)]
     pub url: String,
@@ -270,4 +272,26 @@ pub struct AnchorRequestArgs {
     /// stream. Disabling this will create a deterministic stream.
     #[arg(short, long, default_value_t = true)]
     pub unique: bool,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CasLoadGenArgs {
+    /// CAS API URL
+    #[arg(long)]
+    pub url: String,
+    /// Node controller DID used for CAS Auth.
+    #[arg(long)]
+    pub node_controller: String,
+    /// Stream type.
+    #[arg(long, value_enum)]
+    pub r#type: StreamType,
+    /// Controller, if not set generates random value.
+    #[arg(long)]
+    pub stream_controller: Option<String>,
+    /// Number of requests.
+    #[arg(long)]
+    pub count: u64,
+    /// Rate/second of requests.
+    #[arg(long)]
+    pub rate: Option<u64>,
 }
