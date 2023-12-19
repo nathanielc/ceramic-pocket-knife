@@ -4,6 +4,10 @@ FEATURES = ceramic cas ipld multibase multihash p2p
 
 all: build test check-fmt check-clippy
 
+.PHONY: build-all
+build-all:
+	${CARGO} build --all-features
+
 .PHONY: build
 build:
 	${CARGO} build --all-features

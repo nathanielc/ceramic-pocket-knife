@@ -7,9 +7,6 @@ WORKDIR /home/builder/cpk
 ARG UID=1001
 ARG GID=1001
 
-# Define the type of build to make. One of release or debug.
-ARG BUILD_MODE=release
-
 # Copy in source code
 COPY . .
 
@@ -18,8 +15,8 @@ COPY . .
 #   docker builder prune --filter type=exec.cachemount
 RUN --mount=type=cache,target=/home/builder/.cargo,uid=$UID,gid=$GID \
 	--mount=type=cache,target=/home/builder/cpk/target,uid=$UID,gid=$GID \
-    make $BUILD_MODE && \
-    cp ./target/release/cpk ./
+    make build-all && \
+    cp ./target/debug/cpk ./
 
 FROM debian:bookworm-slim
 
