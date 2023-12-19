@@ -62,6 +62,8 @@ pub enum Command {
     StreamIdInspect(StreamIdInspectArgs),
     /// Generate a random stream ID
     StreamIdGenerate(StreamIdGenerateArgs),
+    /// Create a stream with genesis commit
+    StreamCreate(StreamCreateArgs),
     /// Generate a random event ID
     EventIdGenerate(EventIdGenerateArgs),
     /// Decode a hex encoded event ID
@@ -88,6 +90,12 @@ pub enum Command {
     // ---------------- Libp2p Tools ----------------------------//
     P2pPing(PingArgs),
     P2pIdentify(IdentifyArgs),
+
+    // ---------------- CAS Tools ----------------------------//
+    /// Create a Ceramic stream and send its anchor request to a CAS
+    CasAnchorRequest(CasAnchorRequestArgs),
+    /// Generate Ceramic streams/anchor requests to load a CAS
+    CasLoadGen(CasLoadGenArgs),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -119,6 +127,23 @@ pub struct StreamIdGenerateArgs {
     /// Stream type.
     #[arg(long, value_enum)]
     pub r#type: StreamType,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct StreamCreateArgs {
+    /// Stream type.
+    #[arg(long, value_enum)]
+    pub r#type: StreamType,
+    /// Controller, if not set generates random value.
+    #[arg(long)]
+    pub controller: Option<String>,
+    /// Whether or not to add a random, "unique" field will be added to the genesis commit header to create a unique
+    /// stream. Disabling this will create a deterministic stream.
+    #[arg(short, long, default_value_t = true)]
+    pub unique: bool,
+    /// The character code of the base encoding to use for printing the CAR file bytes
+    #[arg(short, long, default_value = "u")]
+    pub base: char,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -167,6 +192,7 @@ pub enum Network {
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum StreamType {
+    Tile,
     Model,
     Document,
 }
@@ -226,4 +252,46 @@ pub struct IdentifyArgs {
     /// Multiaddr for Peer
     #[arg()]
     pub peer_addr: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CasAnchorRequestArgs {
+    /// CAS API URL
+    #[arg(long)]
+    pub url: String,
+    /// Node controller DID used for CAS Auth.
+    #[arg(long)]
+    pub node_controller: String,
+    /// Stream type.
+    #[arg(long, value_enum)]
+    pub r#type: StreamType,
+    /// Controller, if not set generates random value.
+    #[arg(long)]
+    pub stream_controller: Option<String>,
+    /// Whether or not to add a random, "unique" field will be added to the genesis commit header to create a unique
+    /// stream. Disabling this will create a deterministic stream.
+    #[arg(short, long, default_value_t = true)]
+    pub unique: bool,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CasLoadGenArgs {
+    /// CAS API URL
+    #[arg(long)]
+    pub url: String,
+    /// Node controller DID used for CAS Auth.
+    #[arg(long)]
+    pub node_controller: String,
+    /// Stream type.
+    #[arg(long, value_enum)]
+    pub r#type: StreamType,
+    /// Controller, if not set generates random value.
+    #[arg(long)]
+    pub stream_controller: Option<String>,
+    /// Number of requests.
+    #[arg(long)]
+    pub count: u64,
+    /// Rate/second of requests.
+    #[arg(long)]
+    pub rate: Option<u64>,
 }

@@ -1,20 +1,27 @@
+use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use anyhow::Result;
-use ceramic_core::{Cid, EventId, Interest, StreamId, StreamIdType};
+use base64::{engine::general_purpose, Engine};
 use futures::pin_mut;
+use rand::{distributions::Alphanumeric, random, thread_rng, Rng};
+use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+
+use libipld::{cbor::DagCborCodec, ipld, prelude::Codec, Ipld, IpldCodec};
 use libp2p_identity::PeerId;
 use multibase::Base;
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use multihash::{Code::Sha2_256, MultihashDigest};
+
 use recon::{AssociativeHash, Key, Sha256a};
 use sqlx::{Connection, QueryBuilder, Sqlite, SqliteConnection};
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+
+use ceramic_core::{Cid, EventId, Interest, StreamId, StreamIdType};
 
 use crate::{
     cli::{
         Command, EventIdDecodeArgs, EventIdGenerateArgs, InterestDecodeArgs, Network,
-        SqlDbGenerateArgs, StreamIdCreateArgs, StreamIdGenerateArgs, StreamIdInspectArgs,
-        StreamType,
+        SqlDbGenerateArgs, StreamCreateArgs, StreamIdCreateArgs, StreamIdGenerateArgs,
+        StreamIdInspectArgs, StreamType,
     },
     random_cid,
 };
@@ -23,6 +30,7 @@ pub enum Operation {
     StreamIdCreate(StreamIdCreateArgs),
     StreamIdInspect(StreamIdInspectArgs),
     StreamIdGenerate(StreamIdGenerateArgs),
+    StreamCreate(StreamCreateArgs),
     EventIdGenerate(EventIdGenerateArgs),
     EventIdDecode(EventIdDecodeArgs),
     InterestDecode(InterestDecodeArgs),
@@ -39,6 +47,7 @@ impl TryFrom<Command> for Operation {
             Command::StreamIdCreate(args) => Ok(Operation::StreamIdCreate(args)),
             Command::StreamIdInspect(args) => Ok(Operation::StreamIdInspect(args)),
             Command::StreamIdGenerate(args) => Ok(Operation::StreamIdGenerate(args)),
+            Command::StreamCreate(args) => Ok(Operation::StreamCreate(args)),
             Command::EventIdGenerate(args) => Ok(Operation::EventIdGenerate(args)),
             Command::EventIdDecode(args) => Ok(Operation::EventIdDecode(args)),
             Command::InterestDecode(args) => Ok(Operation::InterestDecode(args)),
@@ -73,6 +82,14 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
             };
             stdout.write_all(stream_id.to_string().as_bytes()).await?;
         }
+        Operation::StreamCreate(args) => {
+            let (stream_id, genesis_cid, _) =
+                create_stream(args.r#type, args.controller, args.unique).unwrap();
+            stdout
+                .write_all(format!("{}, {}", stream_id, genesis_cid,).as_bytes())
+                .await?;
+        }
+
         Operation::EventIdGenerate(args) => {
             let network = &convert_network(
                 args.network,
@@ -115,7 +132,7 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
             stdout.write_all(peer_id.to_string().as_bytes()).await?;
         }
         Operation::SqlDbGenerate(args) => {
-            let network = &convert_network(args.network, Some(thread_rng().gen()));
+            let network = &convert_network(args.network, Some(random()));
 
             let mut conn =
                 SqliteConnection::connect(&format!("sqlite:{}?mode=rwc", args.path.display()))
@@ -164,6 +181,7 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
 
 fn convert_type(value: StreamType) -> StreamIdType {
     match value {
+        StreamType::Tile => StreamIdType::Tile,
         StreamType::Model => StreamIdType::Model,
         StreamType::Document => StreamIdType::ModelInstanceDocument,
     }
@@ -255,4 +273,52 @@ async fn insert_batch(
     let query = query_builder.build();
     query.execute(conn).await?;
     Ok(())
+}
+
+/// Create a new Ceramic stream
+pub fn create_stream(
+    stream_type: StreamType,
+    controller: Option<String>,
+    unique: bool,
+) -> Result<(StreamId, Cid, Vec<u8>)> {
+    let controller = controller.unwrap_or_else(|| {
+        thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(32)
+            .map(char::from)
+            .collect()
+    });
+    let genesis_commit = if unique {
+        ipld!({
+            "header": {
+                "unique": stream_unique_header(),
+                "controllers": [controller]
+            }
+        })
+    } else {
+        ipld!({
+            "header": {
+                "controllers": [controller]
+            }
+        })
+    };
+    // Deserialize the genesis commit, encode it as CBOR, and compute the CID.
+    let ipld_map: BTreeMap<String, Ipld> = libipld::serde::from_ipld(genesis_commit)?;
+    let ipld_bytes = DagCborCodec.encode(&ipld_map)?;
+    let genesis_cid = Cid::new_v1(IpldCodec::DagCbor.into(), Sha2_256.digest(&ipld_bytes));
+    Ok((
+        StreamId {
+            r#type: convert_type(stream_type),
+            cid: genesis_cid,
+        },
+        genesis_cid,
+        ipld_bytes,
+    ))
+}
+
+/// Generate a random string to add to a stream's genesis commit in order to make it unique.
+fn stream_unique_header() -> String {
+    let mut data = [0u8; 8];
+    thread_rng().fill(&mut data);
+    general_purpose::STANDARD.encode(data)
 }
