@@ -64,10 +64,10 @@ pub enum Command {
     StreamIdGenerate(StreamIdGenerateArgs),
     /// Generate a random event ID
     EventIdGenerate(EventIdGenerateArgs),
-    /// Decode a hex encoded event ID
-    EventIdDecode(EventIdDecodeArgs),
-    /// Decode a hex encoded interest
-    InterestDecode(InterestDecodeArgs),
+    /// Inspect a multibase encoded event ID
+    EventIdInspect(EventIdInspectArgs),
+    /// Inspect a multibase encoded interest
+    InterestInspect(InterestInspectArgs),
     /// Generate a random did:key method
     DidKeyGenerate,
     /// Generate a random peer ID
@@ -143,14 +143,14 @@ pub struct EventIdGenerateArgs {
     pub init_id: Option<String>,
 }
 #[derive(Args, Debug, Clone)]
-pub struct EventIdDecodeArgs {
+pub struct EventIdInspectArgs {
     /// Multibase encoded Event ID to decode
     #[arg()]
     pub event_id: String,
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct InterestDecodeArgs {
+pub struct InterestInspectArgs {
     /// Hex encoded Interest to decode
     #[arg()]
     pub interest: String,
