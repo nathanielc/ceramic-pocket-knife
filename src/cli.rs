@@ -144,7 +144,7 @@ pub struct EventIdGenerateArgs {
 }
 #[derive(Args, Debug, Clone)]
 pub struct EventIdDecodeArgs {
-    /// Hex encoded Event ID to decode
+    /// Multibase encoded Event ID to decode
     #[arg()]
     pub event_id: String,
 }

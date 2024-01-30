@@ -88,7 +88,7 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
             stdout.write_all(event_id.to_hex().as_bytes()).await?;
         }
         Operation::EventIdDecode(args) => {
-            let bytes = hex::decode(args.event_id)?;
+            let (_base, bytes) = multibase::decode(args.event_id)?;
             let event_id = EventId::from(bytes);
             stdout
                 .write_all(format!("{:#?}", event_id).as_bytes())
