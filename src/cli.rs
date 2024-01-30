@@ -82,8 +82,14 @@ pub enum Command {
     CidInspect(CidInspectArgs),
     /// Convert DAG-JSON data to DAG-CBOR
     DagJsonToCbor,
+    /// Convert DAG-CBOR data to DAG-JSON
+    DagCborToJson,
     /// Convert DAG-JOSE data to DAG-JSON
     DagJoseToJson,
+    /// List contents of a CAR archive
+    CarInspect(CarInspectArgs),
+    /// Extract a single root CID from a CAR archive
+    CarExtract(CarExtractArgs),
 
     // ---------------- Libp2p Tools ----------------------------//
     P2pPing(PingArgs),
@@ -198,6 +204,20 @@ pub struct SqlDbGenerateArgs {
 
 #[derive(Args, Debug, Clone)]
 pub struct CidInspectArgs {
+    /// CID
+    #[arg()]
+    pub cid: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CarInspectArgs {
+    /// When true, only metadata about the car file is decoded
+    #[arg(long, default_value_t = false)]
+    pub metadata_only: bool,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CarExtractArgs {
     /// CID
     #[arg()]
     pub cid: String,
