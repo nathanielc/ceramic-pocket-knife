@@ -96,8 +96,8 @@ pub async fn run(
                 if !args.metadata_only {
                     let dag_data = match cid.codec() {
                         0x71 => Some(Ipld::decode(DagCborCodec, &mut Cursor::new(data))?),
-                        0x85 => Some(Ipld::decode(DagJsonCodec, &mut Cursor::new(data))?),
-                        0x0129 => Some(Ipld::decode(DagJoseCodec, &mut Cursor::new(data))?),
+                        0x129 => Some(Ipld::decode(DagJsonCodec, &mut Cursor::new(data))?),
+                        0x85 => Some(Ipld::decode(DagJoseCodec, &mut Cursor::new(data))?),
                         _ => None,
                     };
                     if let Some(dag_data) = dag_data {
