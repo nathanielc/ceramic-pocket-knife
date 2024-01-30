@@ -12,7 +12,7 @@ use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
 use crate::{
     cli::{
-        Command, EventIdDecodeArgs, EventIdGenerateArgs, InterestDecodeArgs, Network,
+        Command, EventIdGenerateArgs, EventIdInspectArgs, InterestInspectArgs, Network,
         SqlDbGenerateArgs, StreamIdCreateArgs, StreamIdGenerateArgs, StreamIdInspectArgs,
         StreamType,
     },
@@ -24,8 +24,8 @@ pub enum Operation {
     StreamIdInspect(StreamIdInspectArgs),
     StreamIdGenerate(StreamIdGenerateArgs),
     EventIdGenerate(EventIdGenerateArgs),
-    EventIdDecode(EventIdDecodeArgs),
-    InterestDecode(InterestDecodeArgs),
+    EventIdInspect(EventIdInspectArgs),
+    InterestInspect(InterestInspectArgs),
     DidKeyGenerate,
     PeerIdGenerate,
     SqlDbGenerate(SqlDbGenerateArgs),
@@ -40,8 +40,8 @@ impl TryFrom<Command> for Operation {
             Command::StreamIdInspect(args) => Ok(Operation::StreamIdInspect(args)),
             Command::StreamIdGenerate(args) => Ok(Operation::StreamIdGenerate(args)),
             Command::EventIdGenerate(args) => Ok(Operation::EventIdGenerate(args)),
-            Command::EventIdDecode(args) => Ok(Operation::EventIdDecode(args)),
-            Command::InterestDecode(args) => Ok(Operation::InterestDecode(args)),
+            Command::EventIdInspect(args) => Ok(Operation::EventIdInspect(args)),
+            Command::InterestInspect(args) => Ok(Operation::InterestInspect(args)),
             Command::DidKeyGenerate => Ok(Operation::DidKeyGenerate),
             Command::PeerIdGenerate => Ok(Operation::PeerIdGenerate),
             Command::SqlDbGenerate(args) => Ok(Operation::SqlDbGenerate(args)),
@@ -87,15 +87,15 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
             )?;
             stdout.write_all(event_id.to_hex().as_bytes()).await?;
         }
-        Operation::EventIdDecode(args) => {
+        Operation::EventIdInspect(args) => {
             let (_base, bytes) = multibase::decode(args.event_id)?;
             let event_id = EventId::from(bytes);
             stdout
                 .write_all(format!("{:#?}", event_id).as_bytes())
                 .await?;
         }
-        Operation::InterestDecode(args) => {
-            let bytes = hex::decode(args.interest)?;
+        Operation::InterestInspect(args) => {
+            let (_base, bytes) = multibase::decode(args.interest)?;
             let interest = Interest::from(bytes);
             stdout
                 .write_all(format!("{:#?}", interest).as_bytes())
