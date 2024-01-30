@@ -16,7 +16,11 @@ pub use cli::Cli;
 use clap::CommandFactory;
 use tokio::io::{AsyncRead, AsyncWrite};
 
-pub async fn run(args: Cli, stdin: impl AsyncRead, stdout: impl AsyncWrite) -> anyhow::Result<()> {
+pub async fn run(
+    args: Cli,
+    stdin: impl AsyncRead + Send,
+    stdout: impl AsyncWrite + Send,
+) -> anyhow::Result<()> {
     // Generate shell completetions
     if let cli::Command::Completion(args) = &args.command {
         args.shell
