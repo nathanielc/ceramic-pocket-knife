@@ -89,14 +89,14 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
         }
         Operation::EventIdInspect(args) => {
             let (_base, bytes) = multibase::decode(args.event_id)?;
-            let event_id = EventId::from(bytes);
+            let event_id = EventId::try_from(bytes)?;
             stdout
                 .write_all(format!("{:#?}", event_id).as_bytes())
                 .await?;
         }
         Operation::InterestInspect(args) => {
             let (_base, bytes) = multibase::decode(args.interest)?;
-            let interest = Interest::from(bytes);
+            let interest = Interest::try_from(bytes)?;
             stdout
                 .write_all(format!("{:#?}", interest).as_bytes())
                 .await?;
