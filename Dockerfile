@@ -20,6 +20,7 @@ RUN --mount=type=cache,target=/home/builder/.cargo,uid=$UID,gid=$GID \
 
 FROM debian:bookworm-slim
 
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /home/builder/cpk/cpk /usr/bin
 
 # Adding this step after copying the ckp binary so that we always take the newest libs from the builder if the main
