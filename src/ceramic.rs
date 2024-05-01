@@ -6,15 +6,13 @@ use futures::pin_mut;
 use libp2p_identity::PeerId;
 use multibase::Base;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use recon::{AssociativeHash, Key, Sha256a};
-use sqlx::{Connection, QueryBuilder, Sqlite, SqliteConnection};
+use recon::Key;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
 use crate::{
     cli::{
         Command, EventIdGenerateArgs, EventIdInspectArgs, InterestInspectArgs, Network,
-        SqlDbGenerateArgs, StreamIdCreateArgs, StreamIdGenerateArgs, StreamIdInspectArgs,
-        StreamType,
+        StreamIdCreateArgs, StreamIdGenerateArgs, StreamIdInspectArgs, StreamType,
     },
     random_cid,
 };
@@ -28,7 +26,6 @@ pub enum Operation {
     InterestInspect(InterestInspectArgs),
     DidKeyGenerate,
     PeerIdGenerate,
-    SqlDbGenerate(SqlDbGenerateArgs),
 }
 
 impl TryFrom<Command> for Operation {
@@ -44,7 +41,6 @@ impl TryFrom<Command> for Operation {
             Command::InterestInspect(args) => Ok(Operation::InterestInspect(args)),
             Command::DidKeyGenerate => Ok(Operation::DidKeyGenerate),
             Command::PeerIdGenerate => Ok(Operation::PeerIdGenerate),
-            Command::SqlDbGenerate(args) => Ok(Operation::SqlDbGenerate(args)),
             _ => Err(value),
         }
     }
@@ -58,12 +54,14 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
                 r#type: convert_type(args.r#type),
                 cid: Cid::from_str(&args.cid)?,
             };
-            stdout.write_all(stream_id.to_string().as_bytes()).await?;
+            stdout
+                .write_all(format!("{:?}\n", stream_id).as_bytes())
+                .await?;
         }
         Operation::StreamIdInspect(args) => {
             let stream_id = StreamId::from_str(&args.id)?;
             stdout
-                .write_all(format!("{:?}", stream_id).as_bytes())
+                .write_all(format!("{:?}\n", stream_id).as_bytes())
                 .await?;
         }
         Operation::StreamIdGenerate(args) => {
@@ -71,7 +69,9 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
                 r#type: convert_type(args.r#type),
                 cid: random_cid(),
             };
-            stdout.write_all(stream_id.to_string().as_bytes()).await?;
+            stdout
+                .write_all(format!("{:?}\n", stream_id).as_bytes())
+                .await?;
         }
         Operation::EventIdGenerate(args) => {
             let network = &convert_network(
@@ -85,20 +85,22 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
                 args.controller,
                 args.init_id,
             )?;
-            stdout.write_all(event_id.to_hex().as_bytes()).await?;
+            stdout
+                .write_all(format!("{}\n", event_id.to_hex()).as_bytes())
+                .await?;
         }
         Operation::EventIdInspect(args) => {
             let (_base, bytes) = multibase::decode(args.event_id)?;
             let event_id = EventId::try_from(bytes)?;
             stdout
-                .write_all(format!("{:#?}", event_id).as_bytes())
+                .write_all(format!("{:#?}\n", event_id).as_bytes())
                 .await?;
         }
         Operation::InterestInspect(args) => {
             let (_base, bytes) = multibase::decode(args.interest)?;
             let interest = Interest::try_from(bytes)?;
             stdout
-                .write_all(format!("{:#?}", interest).as_bytes())
+                .write_all(format!("{:#?}\n", interest).as_bytes())
                 .await?;
         }
         Operation::DidKeyGenerate => {
@@ -106,57 +108,13 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
             thread_rng().fill(&mut buffer);
             stdout
                 .write_all(
-                    format!("did:key:{}", multibase::encode(Base::Base58Btc, buffer)).as_bytes(),
+                    format!("did:key:{}\n", multibase::encode(Base::Base58Btc, buffer)).as_bytes(),
                 )
                 .await?;
         }
         Operation::PeerIdGenerate => {
             let peer_id = PeerId::random();
-            stdout.write_all(peer_id.to_string().as_bytes()).await?;
-        }
-        Operation::SqlDbGenerate(args) => {
-            let network = &convert_network(args.network, Some(thread_rng().gen()));
-
-            let mut conn =
-                SqliteConnection::connect(&format!("sqlite:{}?mode=rwc", args.path.display()))
-                    .await?;
-
-            sqlx::query(
-                "CREATE TABLE IF NOT EXISTS recon (
-            sort_key TEXT, -- the field in the event header to sort by e.g. model
-            key BLOB, -- network_id sort_value controller StreamID height event_cid
-            ahash_0 INTEGER, -- the ahash is decomposed as [u32; 8]
-            ahash_1 INTEGER,
-            ahash_2 INTEGER,
-            ahash_3 INTEGER,
-            ahash_4 INTEGER,
-            ahash_5 INTEGER,
-            ahash_6 INTEGER,
-            ahash_7 INTEGER,
-            CID TEXT,
-            block_retrieved BOOL, -- indicates if we still want the block
-            PRIMARY KEY(sort_key, key)
-        )",
-            )
-            .execute(&mut conn)
-            .await?;
-
-            let mut batch = Vec::with_capacity(1000);
-            for _ in 0..args.count {
-                let event_id = random_event_id(
-                    network,
-                    Some(args.sort_key.clone()),
-                    args.sort_value.clone(),
-                    args.controller.clone(),
-                    args.init_id.clone(),
-                )?;
-                batch.push(event_id);
-                if batch.len() == batch.capacity() {
-                    insert_batch(&mut conn, &args.sort_key, &batch).await?;
-                    batch.clear();
-                }
-            }
-            insert_batch(&mut conn, &args.sort_key, &batch).await?;
+            stdout.write_all(format!("{peer_id}\n").as_bytes()).await?;
         }
     };
     Ok(())
@@ -222,37 +180,4 @@ fn random_event_id(
         thread_rng().gen(),
         &random_cid(),
     ))
-}
-
-async fn insert_batch(
-    conn: &mut SqliteConnection,
-    sort_key: &str,
-    batch: &[EventId],
-) -> Result<()> {
-    if batch.is_empty() {
-        return Ok(());
-    }
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-                        // Note the trailing space; most calls to `QueryBuilder` don't automatically insert
-                        // spaces as that might interfere with identifiers or quoted strings where exact
-                        // values may matter.
-                        "INSERT INTO recon ( sort_key, key, ahash_0, ahash_1, ahash_2, ahash_3, ahash_4, ahash_5, ahash_6, ahash_7, block_retrieved) ",
-                    );
-    query_builder.push_values(batch.iter(), |mut b, event| {
-        let hash = Sha256a::digest(event);
-        b.push_bind(sort_key)
-            .push_bind(event.as_bytes())
-            .push_bind(hash.as_u32s()[0])
-            .push_bind(hash.as_u32s()[1])
-            .push_bind(hash.as_u32s()[2])
-            .push_bind(hash.as_u32s()[3])
-            .push_bind(hash.as_u32s()[4])
-            .push_bind(hash.as_u32s()[5])
-            .push_bind(hash.as_u32s()[6])
-            .push_bind(hash.as_u32s()[7])
-            .push_bind(false);
-    });
-    let query = query_builder.build();
-    query.execute(conn).await?;
-    Ok(())
 }
