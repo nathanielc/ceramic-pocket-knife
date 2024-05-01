@@ -82,8 +82,11 @@ pub async fn run(
 
 #[cfg(any(feature = "ipld", feature = "ceramic"))]
 fn random_cid() -> cid::Cid {
+    use multihash_codetable::Code;
+    use multihash_derive::MultihashDigest;
+
     let mut data = [0u8; 8];
     rand::Rng::fill(&mut rand::thread_rng(), &mut data);
-    let hash = ::multihash::MultihashDigest::digest(&::multihash::Code::Sha2_256, &data);
+    let hash = Code::Sha2_256.digest(&data);
     cid::Cid::new_v1(0x00, hash)
 }

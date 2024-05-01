@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 /// Convert to and from multibase encodings
@@ -72,20 +70,24 @@ pub enum Command {
     DidKeyGenerate,
     /// Generate a random peer ID
     PeerIdGenerate,
-    /// Generate a ceramic-one sqldb with random data
-    SqlDbGenerate(SqlDbGenerateArgs),
 
     // ---------------- IPLD Tools ----------------------------//
     /// Generate a random stream ID
     CidGenerate,
     /// Inspect a CID
     CidInspect(CidInspectArgs),
+    /// Construct a CID from raw bytes
+    CidFromBytes,
     /// Convert DAG-JSON data to DAG-CBOR
     DagJsonToCbor,
     /// Convert DAG-CBOR data to DAG-JSON
     DagCborToJson,
     /// Convert DAG-JOSE data to DAG-JSON
     DagJoseToJson,
+    /// Inspect DAG-CBOR encoded data
+    DagCborInspect,
+    /// Index into DAG-CBOR encoded data
+    DagCborIndex(DagCborIndexArgs),
     /// List contents of a CAR archive
     CarInspect(CarInspectArgs),
     /// Extract a single root CID from a CAR archive
@@ -178,31 +180,6 @@ pub enum StreamType {
 }
 
 #[derive(Args, Debug, Clone)]
-pub struct SqlDbGenerateArgs {
-    /// Network
-    #[arg(long, default_value = "./ceramic-one.db")]
-    pub path: PathBuf,
-    /// Network
-    #[arg(long, default_value = "100")]
-    pub count: usize,
-    /// Network
-    #[arg(long, default_value = "testnet-clay", value_enum)]
-    pub network: Network,
-    /// Sort Key for all events.
-    #[arg(long, default_value = "model")]
-    pub sort_key: String,
-    /// Sort Value, if not set generates random value per event.
-    #[arg(long)]
-    pub sort_value: Option<String>,
-    /// Controller, if not set generates random value per event.
-    #[arg(long)]
-    pub controller: Option<String>,
-    /// Stream ID of init event, if not set generates random value per event.
-    #[arg(long)]
-    pub init_id: Option<String>,
-}
-
-#[derive(Args, Debug, Clone)]
 pub struct CidInspectArgs {
     /// CID
     #[arg()]
@@ -221,6 +198,13 @@ pub struct CarExtractArgs {
     /// CID
     #[arg()]
     pub cid: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct DagCborIndexArgs {
+    /// Index path into the IPLD value
+    #[arg()]
+    pub index: String,
 }
 
 #[derive(Args, Debug, Clone)]

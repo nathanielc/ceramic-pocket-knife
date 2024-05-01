@@ -63,13 +63,14 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
                             Ok(duration) => {
                                 stdout
                                     .write_all(
-                                        format!("response from {peer} in {duration:?}").as_bytes(),
+                                        format!("response from {peer} in {duration:?}\n")
+                                            .as_bytes(),
                                     )
                                     .await?
                             }
                             Err(err) => {
                                 stdout
-                                    .write_all(format!("ping failed {err}").as_bytes())
+                                    .write_all(format!("ping failed {err}\n").as_bytes())
                                     .await?;
                                 break;
                             }
@@ -102,7 +103,7 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
                     SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
                         stdout
                             .write_all(
-                                format!("failed to connect to {peer_id:?}: {error}").as_bytes(),
+                                format!("failed to connect to {peer_id:?}: {error}\n").as_bytes(),
                             )
                             .await?;
                         break;
@@ -118,12 +119,13 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
                                 .map(ToString::to_string)
                                 .collect::<Vec<String>>()
                                 .join("\n\t");
-                            let protocols = info
+                            let mut protocols = info
                                 .protocols
                                 .iter()
                                 .map(ToString::to_string)
-                                .collect::<Vec<String>>()
-                                .join("\n\t");
+                                .collect::<Vec<String>>();
+                            protocols.sort();
+                            let protocols = protocols.join("\n\t");
                             let observed_address = info.observed_addr;
                             stdout
                                 .write_all(
@@ -136,7 +138,8 @@ Observed Address: {observed_address}
 Listen Addresses:
 \t{listen_addrs}
 Protocols:
-\t{protocols}"
+\t{protocols}
+"
                                     )
                                     .as_bytes(),
                                 )
@@ -146,7 +149,7 @@ Protocols:
                         identify::Event::Error { error, .. } => {
                             stdout
                                 .write_all(
-                                    format!("Error getting peer identity: {error}").as_bytes(),
+                                    format!("Error getting peer identity: {error}\n").as_bytes(),
                                 )
                                 .await?
                         }

@@ -60,7 +60,7 @@ pub async fn run(op: Operation, stdin: impl AsyncRead, stdout: impl AsyncWrite) 
         Operation::Guess => {
             if let Some((base, is_multibase)) = guess(input_utf8(stdin).await?.trim_end()) {
                 stdout
-                    .write_all(format!("{:?} is_multibase: {}", base, is_multibase).as_bytes())
+                    .write_all(format!("{:?} is_multibase: {}\n", base, is_multibase).as_bytes())
                     .await?
             }
         }
@@ -105,7 +105,7 @@ async fn input_utf8(stdin: impl AsyncRead) -> Result<String> {
 async fn encode(stdin: impl AsyncRead, stdout: impl AsyncWrite, base: Base) -> Result<()> {
     pin_mut!(stdout);
     stdout
-        .write_all(multibase::encode(base, input_bytes(stdin).await?).as_bytes())
+        .write_all(format!("{}\n", multibase::encode(base, input_bytes(stdin).await?)).as_bytes())
         .await?;
     Ok(())
 }
