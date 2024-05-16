@@ -60,6 +60,8 @@ pub enum Command {
     StreamIdInspect(StreamIdInspectArgs),
     /// Generate a random stream ID
     StreamIdGenerate(StreamIdGenerateArgs),
+    /// Construct a stream ID from raw bytes
+    StreamIdFromBytes,
     /// Generate a random event ID
     EventIdGenerate(EventIdGenerateArgs),
     /// Inspect a multibase encoded event ID

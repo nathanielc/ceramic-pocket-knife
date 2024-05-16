@@ -7,7 +7,7 @@ use libp2p_identity::PeerId;
 use multibase::Base;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use recon::Key;
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::{
     cli::{
@@ -21,6 +21,7 @@ pub enum Operation {
     StreamIdCreate(StreamIdCreateArgs),
     StreamIdInspect(StreamIdInspectArgs),
     StreamIdGenerate(StreamIdGenerateArgs),
+    StreamIdFromBytes,
     EventIdGenerate(EventIdGenerateArgs),
     EventIdInspect(EventIdInspectArgs),
     InterestInspect(InterestInspectArgs),
@@ -36,6 +37,7 @@ impl TryFrom<Command> for Operation {
             Command::StreamIdCreate(args) => Ok(Operation::StreamIdCreate(args)),
             Command::StreamIdInspect(args) => Ok(Operation::StreamIdInspect(args)),
             Command::StreamIdGenerate(args) => Ok(Operation::StreamIdGenerate(args)),
+            Command::StreamIdFromBytes => Ok(Operation::StreamIdFromBytes),
             Command::EventIdGenerate(args) => Ok(Operation::EventIdGenerate(args)),
             Command::EventIdInspect(args) => Ok(Operation::EventIdInspect(args)),
             Command::InterestInspect(args) => Ok(Operation::InterestInspect(args)),
@@ -46,8 +48,8 @@ impl TryFrom<Command> for Operation {
     }
 }
 
-pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite) -> Result<()> {
-    pin_mut!(stdout);
+pub async fn run(op: Operation, stdin: impl AsyncRead, stdout: impl AsyncWrite) -> Result<()> {
+    pin_mut!(stdin, stdout);
     match op {
         Operation::StreamIdCreate(args) => {
             let stream_id = StreamId {
@@ -71,6 +73,14 @@ pub async fn run(op: Operation, _stdin: impl AsyncRead, stdout: impl AsyncWrite)
             };
             stdout
                 .write_all(format!("{:?}\n", stream_id).as_bytes())
+                .await?;
+        }
+        Operation::StreamIdFromBytes => {
+            let mut bytes = Vec::new();
+            stdin.read_to_end(&mut bytes).await?;
+            let stream_id = StreamId::try_from(bytes.as_slice())?;
+            stdout
+                .write_all(format!("{}\n", stream_id).as_bytes())
                 .await?;
         }
         Operation::EventIdGenerate(args) => {
