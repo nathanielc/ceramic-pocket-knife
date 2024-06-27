@@ -29,6 +29,7 @@ ipld = [
     "dep:dag-jose",
     "dep:ipld-core",
     "dep:iroh-car",
+    "dep:multibase",
     "dep:serde_ipld_dagcbor",
     "dep:serde_ipld_dagjson",
     "multihash",
