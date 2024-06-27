@@ -78,8 +78,10 @@ pub enum Command {
     CidGenerate,
     /// Inspect a CID
     CidInspect(CidInspectArgs),
-    /// Construct a CID from raw bytes
+    /// Construct a CID from CID bytes
     CidFromBytes,
+    /// Hash bytes to compute a CID
+    CidFromData(CidFromDataArgs),
     /// Convert DAG-JSON data to DAG-CBOR
     DagJsonToCbor,
     /// Convert DAG-CBOR data to DAG-JSON
@@ -186,6 +188,13 @@ pub struct CidInspectArgs {
     /// CID
     #[arg()]
     pub cid: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CidFromDataArgs {
+    /// Codec
+    #[arg()]
+    pub codec: u64,
 }
 
 #[derive(Args, Debug, Clone)]

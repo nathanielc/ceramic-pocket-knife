@@ -6,12 +6,15 @@ use dag_jose::DagJoseCodec;
 use futures::pin_mut;
 use ipld_core::{codec::Codec, ipld::Ipld};
 use iroh_car::CarReader;
+use multihash_codetable::{Code, MultihashDigest};
 use serde_ipld_dagcbor::codec::DagCborCodec;
 use serde_ipld_dagjson::codec::DagJsonCodec;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::{
-    cli::{CarExtractArgs, CarInspectArgs, CidInspectArgs, Command, DagCborIndexArgs},
+    cli::{
+        CarExtractArgs, CarInspectArgs, CidFromDataArgs, CidInspectArgs, Command, DagCborIndexArgs,
+    },
     random_cid,
 };
 
@@ -19,6 +22,7 @@ pub enum Operation {
     CidGenerate,
     CidInspect(CidInspectArgs),
     CidFromBytes,
+    CidFromData(CidFromDataArgs),
     DagJsonToCbor,
     DagCborToJson,
     DagJoseToJson,
@@ -36,6 +40,7 @@ impl TryFrom<Command> for Operation {
             Command::CidGenerate => Ok(Operation::CidGenerate),
             Command::CidInspect(args) => Ok(Operation::CidInspect(args)),
             Command::CidFromBytes => Ok(Operation::CidFromBytes),
+            Command::CidFromData(args) => Ok(Operation::CidFromData(args)),
             Command::DagJsonToCbor => Ok(Operation::DagJsonToCbor),
             Command::DagCborToJson => Ok(Operation::DagCborToJson),
             Command::DagJoseToJson => Ok(Operation::DagJoseToJson),
@@ -67,6 +72,13 @@ pub async fn run(
             let mut data = Vec::new();
             stdin.read_to_end(&mut data).await?;
             let cid = Cid::read_bytes(Cursor::new(data))?;
+            stdout.write_all(format!("{cid}\n").as_bytes()).await?;
+        }
+        Operation::CidFromData(args) => {
+            let mut data = Vec::new();
+            stdin.read_to_end(&mut data).await?;
+            let hash = Code::Sha2_256.digest(&data);
+            let cid = Cid::new_v1(args.codec, hash);
             stdout.write_all(format!("{cid}\n").as_bytes()).await?;
         }
         Operation::DagJsonToCbor => {
@@ -106,9 +118,12 @@ pub async fn run(
             let mut data = Vec::new();
             stdin.read_to_end(&mut data).await?;
             let dag_data: Ipld = serde_ipld_dagcbor::from_slice(&data)?;
-            let idx_data = dag_data
-                .take(args.index.as_str())?
-                .ok_or_else(|| anyhow!("no IPLD data exists at index"))?;
+            let mut idx_data = dag_data;
+            for index in args.index.split('/') {
+                idx_data = idx_data
+                    .take(index)?
+                    .ok_or_else(|| anyhow!("no IPLD data exists at index"))?;
+            }
             match idx_data {
                 // Write nothing for Null values
                 Ipld::Null => {}
@@ -168,9 +183,12 @@ pub async fn run(
 }
 
 fn fmt_cid(cid: &Cid) -> Result<String> {
+    let v0 = Cid::new_v0(*cid.hash())?;
     Ok(format!(
-        "CID: {}\nVersion: {:?}\nCodec: 0x{:x}\nHash Code: 0x{:x}\nHash: 0x{}\n",
+        "CID V1: {}\nCID V0: {}\nBase32: {}\nVersion: {:?}\nCodec: 0x{:x}\nHash Code: 0x{:x}\nHash: 0x{}\n",
         cid.into_v1()?,
+        &v0,
+        multibase::encode(multibase::Base::Base32Upper, v0.to_bytes()),
         cid.version(),
         cid.codec(),
         cid.hash().code(),
