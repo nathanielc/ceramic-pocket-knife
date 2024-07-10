@@ -1,3 +1,6 @@
+use std::str::FromStr;
+
+use cid::Cid;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 /// Convert to and from multibase encodings
@@ -96,6 +99,8 @@ pub enum Command {
     CarInspect(CarInspectArgs),
     /// Extract a single root CID from a CAR archive
     CarExtract(CarExtractArgs),
+    /// Construct a CAR file bytes from a list of blocks
+    CarFromBlocks(CarFromBlocksArgs),
 
     // ---------------- Libp2p Tools ----------------------------//
     P2pPing(PingArgs),
@@ -144,7 +149,7 @@ pub struct EventIdGenerateArgs {
     /// Sort Key, if not set generates random value.
     #[arg(long)]
     pub sort_key: Option<String>,
-    /// Sort Value, if not set generates random value.
+    /// Multibase encoded sort value, if not set generates random value.
     #[arg(long)]
     pub sort_value: Option<String>,
     /// Controller, if not set generates random value.
@@ -209,6 +214,40 @@ pub struct CarExtractArgs {
     /// CID
     #[arg()]
     pub cid: String,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CarFromBlocksArgs {
+    /// List of files to add to the car file in order.
+    /// Format the arg with `@cid:path/to/file` for blocks that are part of the roots and
+    /// format with `cid:path/to/file` for blocks that are NOT part of the roots.
+    #[arg()]
+    pub blocks: Vec<CarBlockValue>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CarBlockValue {
+    pub root: bool,
+    pub cid: Cid,
+    pub path: String,
+}
+
+impl FromStr for CarBlockValue {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        const ROOT_PATTERN: char = '@';
+        let root = s.starts_with(ROOT_PATTERN);
+        let (cid, path) = s
+            .trim_start_matches(ROOT_PATTERN)
+            .split_once(':')
+            .ok_or_else(|| anyhow::anyhow!("car block must be in the form cid:path/to/block"))?;
+        Ok(Self {
+            root,
+            cid: Cid::from_str(cid)?,
+            path: path.to_string(),
+        })
+    }
 }
 
 #[derive(Args, Debug, Clone)]

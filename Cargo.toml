@@ -16,8 +16,6 @@ name = "cpk"
 default = ["ceramic", "ipld", "multibase", "multihash", "p2p"]
 ceramic = [
     "dep:ceramic-core",
-    "dep:ceramic-store",
-    "dep:cid",
     "dep:libp2p-identity",
     "dep:multibase",
     "dep:recon",
@@ -25,7 +23,6 @@ ceramic = [
     "multihash",
 ]
 ipld = [
-    "dep:cid",
     "dep:dag-jose",
     "dep:ipld-core",
     "dep:iroh-car",
@@ -41,11 +38,10 @@ p2p = ["dep:libp2p", "dep:libp2p-identity"]
 [dependencies]
 anyhow = "1"
 ceramic-core = { git = "https://github.com/3box/rust-ceramic", branch = "main", optional = true }
-ceramic-store = { git = "https://github.com/3box/rust-ceramic", branch = "main", optional = true }
 recon = { git = "https://github.com/3box/rust-ceramic", branch = "main", optional = true }
 ipld-core = { version = "0.4", optional = true }
 iroh-car = { git = "https://github.com/3box/rust-ceramic", branch = "main", optional = true }
-cid = { version = "0.11", optional = true }
+cid = { version = "0.11" }
 clap = { version = "4", features = ["derive"] }
 clap_complete_command = "0.5.1"
 libp2p-identity = { version = "0.1.2", features = [
@@ -68,6 +64,7 @@ tokio = { version = "1.32", features = [
     "macros",
     "io-util",
     "io-std",
+    "fs",
 ] }
 hex = "0.4.3"
 dag-jose = { version = "0.2", optional = true }
