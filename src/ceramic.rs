@@ -91,7 +91,11 @@ pub async fn run(op: Operation, stdin: impl AsyncRead, stdout: impl AsyncWrite) 
             let event_id = random_event_id(
                 network,
                 args.sort_key,
-                args.sort_value,
+                args.sort_value.and_then(|sort_value| {
+                    multibase::decode(sort_value)
+                        .ok()
+                        .map(|(_base, bytes)| bytes)
+                }),
                 args.controller,
                 args.init_id,
             )?;
@@ -149,7 +153,7 @@ fn convert_network(value: Network, local_id: Option<u32>) -> ceramic_core::Netwo
 fn random_event_id(
     network: &ceramic_core::Network,
     sort_key: Option<String>,
-    sort_value: Option<String>,
+    sort_value: Option<Vec<u8>>,
     controller: Option<String>,
     init_id: Option<String>,
 ) -> Result<EventId> {
@@ -165,7 +169,7 @@ fn random_event_id(
             r#type: StreamIdType::Model,
             cid: random_cid(),
         }
-        .to_string()
+        .to_vec()
     });
     let controller = controller.unwrap_or_else(|| {
         thread_rng()
@@ -187,7 +191,6 @@ fn random_event_id(
         &sort_value,
         &controller,
         &init_id.cid,
-        thread_rng().gen(),
         &random_cid(),
     ))
 }
