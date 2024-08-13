@@ -131,9 +131,7 @@ pub async fn run(
                 // Write nothing for Null values
                 Ipld::Null => {}
                 Ipld::Bytes(bytes) => stdout.write_all(&bytes).await?,
-                composite @ Ipld::List(_)
-                | composite @ Ipld::Map(_)
-                | composite @ Ipld::Link(_) => {
+                composite @ Ipld::List(_) | composite @ Ipld::Map(_) => {
                     stdout
                         .write_all(&serde_ipld_dagcbor::to_vec(&composite)?)
                         .await?;
@@ -142,6 +140,7 @@ pub async fn run(
                 Ipld::Integer(i) => stdout.write_all(format!("{i}\n").as_bytes()).await?,
                 Ipld::Float(f) => stdout.write_all(format!("{f}\n").as_bytes()).await?,
                 Ipld::String(s) => stdout.write_all(format!("{s}\n").as_bytes()).await?,
+                Ipld::Link(cid) => stdout.write_all(&cid.to_bytes()).await?,
             };
         }
         Operation::CarInspect(args) => {

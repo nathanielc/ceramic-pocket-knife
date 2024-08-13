@@ -69,6 +69,8 @@ pub enum Command {
     EventIdGenerate(EventIdGenerateArgs),
     /// Inspect a multibase encoded event ID
     EventIdInspect(EventIdInspectArgs),
+    /// Inspect an event car file
+    EventInspect,
     /// Inspect a multibase encoded interest
     InterestInspect(InterestInspectArgs),
     /// Generate a random did:key method
