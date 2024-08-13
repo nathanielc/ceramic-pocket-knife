@@ -2,7 +2,9 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use ceramic_core::{Cid, EventId, Interest, StreamId, StreamIdType};
+use ceramic_event::unvalidated;
 use futures::pin_mut;
+use ipld_core::ipld::Ipld;
 use libp2p_identity::PeerId;
 use multibase::Base;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -24,6 +26,7 @@ pub enum Operation {
     StreamIdFromBytes,
     EventIdGenerate(EventIdGenerateArgs),
     EventIdInspect(EventIdInspectArgs),
+    EventInspect,
     InterestInspect(InterestInspectArgs),
     DidKeyGenerate,
     PeerIdGenerate,
@@ -40,6 +43,7 @@ impl TryFrom<Command> for Operation {
             Command::StreamIdFromBytes => Ok(Operation::StreamIdFromBytes),
             Command::EventIdGenerate(args) => Ok(Operation::EventIdGenerate(args)),
             Command::EventIdInspect(args) => Ok(Operation::EventIdInspect(args)),
+            Command::EventInspect => Ok(Operation::EventInspect),
             Command::InterestInspect(args) => Ok(Operation::InterestInspect(args)),
             Command::DidKeyGenerate => Ok(Operation::DidKeyGenerate),
             Command::PeerIdGenerate => Ok(Operation::PeerIdGenerate),
@@ -109,6 +113,13 @@ pub async fn run(op: Operation, stdin: impl AsyncRead, stdout: impl AsyncWrite) 
             stdout
                 .write_all(format!("{:#?}\n", event_id).as_bytes())
                 .await?;
+        }
+        Operation::EventInspect => {
+            let mut bytes = Vec::new();
+            stdin.read_to_end(&mut bytes).await?;
+            let (_cid, event) =
+                unvalidated::Event::<Ipld>::decode_car(bytes.as_slice(), false).await?;
+            stdout.write_all(format!("{event:#?}\n").as_bytes()).await?;
         }
         Operation::InterestInspect(args) => {
             let (_base, bytes) = multibase::decode(args.interest)?;

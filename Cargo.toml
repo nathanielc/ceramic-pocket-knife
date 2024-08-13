@@ -16,6 +16,8 @@ name = "cpk"
 default = ["ceramic", "ipld", "multibase", "multihash", "p2p"]
 ceramic = [
     "dep:ceramic-core",
+    "dep:ceramic-event",
+    "dep:ipld-core",
     "dep:libp2p-identity",
     "dep:multibase",
     "dep:recon",
@@ -38,6 +40,7 @@ p2p = ["dep:libp2p", "dep:libp2p-identity"]
 [dependencies]
 anyhow = "1"
 ceramic-core = { git = "https://github.com/3box/rust-ceramic", branch = "main", optional = true }
+ceramic-event = { git = "https://github.com/3box/rust-ceramic", branch = "main", optional = true }
 recon = { git = "https://github.com/3box/rust-ceramic", branch = "main", optional = true }
 ipld-core = { version = "0.4", optional = true }
 iroh-car = { git = "https://github.com/3box/rust-ceramic", branch = "main", optional = true }
@@ -93,4 +96,5 @@ clap = { version = "4", features = ["derive"] }
 # Uncomment these lines to use a local copy of rust-ceramic
 #[patch."https://github.com/3box/rust-ceramic"]
 #ceramic-core = { path = "../rust-ceramic/core" }
+#ceramic-event = { path = "../rust-ceramic/event" }
 #recon = { path = "../rust-ceramic/recon" }
