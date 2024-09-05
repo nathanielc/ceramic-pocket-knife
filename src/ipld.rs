@@ -68,7 +68,14 @@ pub async fn run(
             stdout.write_all(format!("{cid}\n").as_bytes()).await?;
         }
         Operation::CidInspect(args) => {
-            let cid = Cid::from_str(&args.cid)?;
+            let cid = if args.cid == "-" {
+                let mut data = Vec::new();
+                stdin.read_to_end(&mut data).await?;
+                let cid_str = std::str::from_utf8(&data)?.trim();
+                Cid::from_str(cid_str)?
+            } else {
+                Cid::from_str(&args.cid)?
+            };
             stdout.write_all(fmt_cid(&cid)?.as_bytes()).await?;
         }
         Operation::CidFromBytes => {
