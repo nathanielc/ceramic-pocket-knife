@@ -192,7 +192,7 @@ pub enum StreamType {
 
 #[derive(Args, Debug, Clone)]
 pub struct CidInspectArgs {
-    /// CID
+    /// CID, if `-` will read CID from STDIN as a string.
     #[arg()]
     pub cid: String,
 }
