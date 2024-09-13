@@ -223,12 +223,14 @@ pub async fn run(
 }
 
 fn fmt_cid(cid: &Cid) -> Result<String> {
-    let v0 = Cid::new_v0(*cid.hash())?;
+    let (v0_str, v0_bytes) = Cid::new_v0(*cid.hash())
+        .map(|v0| (v0.to_string(), v0.to_bytes()))
+        .unwrap_or_default();
     Ok(format!(
         "CID V1: {}\nCID V0: {}\nBase32: {}\nVersion: {:?}\nCodec: 0x{:x}\nHash Code: 0x{:x}\nHash: 0x{}\n",
         cid.into_v1()?,
-        &v0,
-        multibase::encode(multibase::Base::Base32Upper, v0.to_bytes()),
+        &v0_str,
+        multibase::encode(multibase::Base::Base32Upper, &v0_bytes),
         cid.version(),
         cid.codec(),
         cid.hash().code(),
