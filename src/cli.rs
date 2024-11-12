@@ -81,6 +81,8 @@ pub enum Command {
     // ---------------- IPLD Tools ----------------------------//
     /// Generate a random stream ID
     CidGenerate,
+    /// Output CID as raw bytes
+    CidAsBytes(CidInspectArgs),
     /// Inspect a CID
     CidInspect(CidInspectArgs),
     /// Construct a CID from CID bytes

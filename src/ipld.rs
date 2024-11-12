@@ -21,6 +21,7 @@ use crate::{
 
 pub enum Operation {
     CidGenerate,
+    CidAsBytes(CidInspectArgs),
     CidInspect(CidInspectArgs),
     CidFromBytes,
     CidFromData(CidFromDataArgs),
@@ -40,6 +41,7 @@ impl TryFrom<Command> for Operation {
     fn try_from(value: Command) -> std::result::Result<Self, Self::Error> {
         match value {
             Command::CidGenerate => Ok(Operation::CidGenerate),
+            Command::CidAsBytes(args) => Ok(Operation::CidAsBytes(args)),
             Command::CidInspect(args) => Ok(Operation::CidInspect(args)),
             Command::CidFromBytes => Ok(Operation::CidFromBytes),
             Command::CidFromData(args) => Ok(Operation::CidFromData(args)),
@@ -66,6 +68,17 @@ pub async fn run(
         Operation::CidGenerate => {
             let cid = random_cid();
             stdout.write_all(format!("{cid}\n").as_bytes()).await?;
+        }
+        Operation::CidAsBytes(args) => {
+            let cid = if args.cid == "-" {
+                let mut data = Vec::new();
+                stdin.read_to_end(&mut data).await?;
+                let cid_str = std::str::from_utf8(&data)?.trim();
+                Cid::from_str(cid_str)?
+            } else {
+                Cid::from_str(&args.cid)?
+            };
+            stdout.write_all(&cid.to_bytes()).await?;
         }
         Operation::CidInspect(args) => {
             let cid = if args.cid == "-" {

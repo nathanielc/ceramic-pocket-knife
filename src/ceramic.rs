@@ -61,7 +61,7 @@ pub async fn run(op: Operation, stdin: impl AsyncRead, stdout: impl AsyncWrite) 
                 cid: Cid::from_str(&args.cid)?,
             };
             stdout
-                .write_all(format!("{:?}\n", stream_id).as_bytes())
+                .write_all(format!("{stream_id}\n").as_bytes())
                 .await?;
         }
         Operation::StreamIdInspect(args) => {
@@ -76,7 +76,7 @@ pub async fn run(op: Operation, stdin: impl AsyncRead, stdout: impl AsyncWrite) 
                 cid: random_cid(),
             };
             stdout
-                .write_all(format!("{:?}\n", stream_id).as_bytes())
+                .write_all(format!("{stream_id}\n").as_bytes())
                 .await?;
         }
         Operation::StreamIdFromBytes => {
