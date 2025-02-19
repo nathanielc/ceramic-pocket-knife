@@ -8,6 +8,8 @@ mod multibase;
 mod multihash;
 #[cfg(feature = "p2p")]
 mod p2p;
+#[cfg(feature = "parquet")]
+mod parquet;
 
 pub mod cli;
 
@@ -74,6 +76,15 @@ pub async fn run(
     let cmd = match p2p::Operation::try_from(cmd) {
         Ok(op) => {
             return p2p::run(op, stdin, stdout).await;
+        }
+        Err(cmd) => cmd,
+    };
+
+    #[cfg(feature = "parquet")]
+    #[allow(unused)]
+    let cmd = match parquet::Operation::try_from(cmd) {
+        Ok(op) => {
+            return parquet::run(op, stdin, stdout).await;
         }
         Err(cmd) => cmd,
     };
