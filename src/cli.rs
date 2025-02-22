@@ -149,6 +149,9 @@ pub enum Command {
     /// Construct a CAR file bytes from a list of blocks
     #[cfg(feature = "ipld")]
     CarFromBlocks(CarFromBlocksArgs),
+    /// Deconstruct a CAR into its constituent blocks
+    #[cfg(feature = "ipld")]
+    CarToBlocks(CarToBlocksArgs),
 
     // ---------------- Libp2p Tools ----------------------------//
     /// Ping a peer
@@ -283,6 +286,13 @@ pub struct CarFromBlocksArgs {
     /// format with `cid:path/to/file` for blocks that are NOT part of the roots.
     #[arg()]
     pub blocks: Vec<CarBlockValue>,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct CarToBlocksArgs {
+    /// Path to save the extracted blocks (default to current directory)
+    #[arg(default_value = ".")]
+    pub blocks_dir: String,
 }
 
 #[derive(Debug, Clone)]
