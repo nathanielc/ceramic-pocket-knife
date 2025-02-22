@@ -13,8 +13,8 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::{
     cli::{
-        CarExtractArgs, CarFromBlocksArgs, CarInspectArgs, CidFromDataArgs, CidInspectArgs,
-        Command, DagCborIndexArgs,
+        CarExtractArgs, CarFromBlocksArgs, CarInspectArgs, CarToBlocksArgs, CidFromDataArgs,
+        CidInspectArgs, Command, DagCborIndexArgs,
     },
     random_cid,
 };
@@ -33,6 +33,7 @@ pub enum Operation {
     CarInspect(CarInspectArgs),
     CarExtract(CarExtractArgs),
     CarFromBlocks(CarFromBlocksArgs),
+    CarToBlocks(CarToBlocksArgs),
 }
 
 impl TryFrom<Command> for Operation {
@@ -53,6 +54,7 @@ impl TryFrom<Command> for Operation {
             Command::CarInspect(args) => Ok(Operation::CarInspect(args)),
             Command::CarExtract(args) => Ok(Operation::CarExtract(args)),
             Command::CarFromBlocks(args) => Ok(Operation::CarFromBlocks(args)),
+            Command::CarToBlocks(args) => Ok(Operation::CarToBlocks(args)),
             _ => Err(value),
         }
     }
@@ -230,6 +232,13 @@ pub async fn run(
             writer.finish().await?;
 
             stdout.write_all(&car).await?;
+        }
+        Operation::CarToBlocks(args) => {
+            let mut reader = CarReader::new(stdin).await?;
+            while let Some((cid, data)) = reader.next_block().await? {
+                let path = format!("{}/{}", args.blocks_dir, cid);
+                tokio::fs::write(path, data).await?;
+            }
         }
     };
     Ok(())
